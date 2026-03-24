@@ -12,8 +12,11 @@ export function Header() {
     });
   }, []);
 
-  const handleLogout = () => {
-    supabase.auth.signOut();
+  const handleLogout = async () => {
+    localStorage.removeItem('dev_user');
+    await supabase.auth.signOut();
+    // If we were using a mock user, we need to reload to clear the state
+    window.location.reload();
   };
 
   return (

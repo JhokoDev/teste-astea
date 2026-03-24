@@ -24,6 +24,15 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
+    // Check for mock dev user first
+    const mockUser = localStorage.getItem('dev_user');
+    if (mockUser) {
+      setUser(JSON.parse(mockUser));
+      setLoading(false);
+      setIsAuthReady(true);
+      return;
+    }
+
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -32,6 +41,9 @@ export default function App() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // If we have a dev user, don't let Supabase override it unless it's a real login
+      if (localStorage.getItem('dev_user') && !session) return;
+      
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -41,7 +53,7 @@ export default function App() {
 
   useEffect(() => {
     const syncUser = async () => {
-      if (user) {
+      if (user && !localStorage.getItem('dev_user')) {
         const { data: userProfile, error } = await supabase
           .from('users')
           .select('*')

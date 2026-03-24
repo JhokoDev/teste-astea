@@ -6,9 +6,11 @@ import {
   Users, 
   Settings, 
   PanelLeftClose,
-  Beaker
+  Beaker,
+  LogOut
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { supabase } from '../supabase';
 
 export type TabId = 'painel' | 'feiras' | 'projetos' | 'avaliadores' | 'configuracoes';
 
@@ -26,6 +28,12 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+  const handleLogout = async () => {
+    localStorage.removeItem('dev_user');
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
+
   return (
     <aside className="w-64 bg-background-light border-r border-primary/10 flex flex-col justify-between p-4 sticky top-0 h-screen">
       <div className="flex flex-col gap-8">
@@ -58,10 +66,20 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         </nav>
       </div>
 
-      <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary/10 text-primary rounded-xl font-bold text-sm hover:bg-primary/20 transition-colors">
-        <PanelLeftClose className="w-4 h-4" />
-        <span>Recolher</span>
-      </button>
+      <div className="flex flex-col gap-2">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 transition-all duration-200 w-full text-left font-semibold text-sm"
+        >
+          <LogOut className="w-5 h-5" />
+          <span>Sair da Conta</span>
+        </button>
+
+        <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary/10 text-primary rounded-xl font-bold text-sm hover:bg-primary/20 transition-colors">
+          <PanelLeftClose className="w-4 h-4" />
+          <span>Recolher</span>
+        </button>
+      </div>
     </aside>
   );
 }

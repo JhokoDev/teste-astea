@@ -57,6 +57,23 @@ export function LoginView() {
     console.log(`Attempting ${mode} for ${email}`);
     try {
       if (mode === 'login') {
+        // Hardcoded bypass for development
+        if (email === 'admin@ifmaker.com' && password === 'iLy831104') {
+          const mockUser = {
+            id: 'dev-admin-id',
+            email: 'admin@ifmaker.com',
+            user_metadata: {
+              full_name: 'Admin IFMaker (Dev)',
+            },
+            role: 'admin'
+          };
+          localStorage.setItem('dev_user', JSON.stringify(mockUser));
+          toast.success('Login de desenvolvedor realizado!');
+          // Force a page reload to refresh App state with the new localStorage item
+          window.location.reload();
+          return;
+        }
+
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
