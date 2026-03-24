@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, History, Users, FileText, ExternalLink, ChevronRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
-import { projectsService } from '../services/firestoreService';
+import { projectsService } from '../services/supabaseService';
 
 export function ProjectsView() {
   const [selectedProject, setSelectedProject] = useState<any>(null);

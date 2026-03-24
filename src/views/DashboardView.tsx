@@ -5,7 +5,7 @@ import { ProjectTable } from '../components/ProjectTable';
 import { AlertsPanel } from '../components/AlertsPanel';
 import { MOCK_KPIS, MOCK_STAGES, MOCK_ALERTS } from '../constants';
 import { motion } from 'motion/react';
-import { projectsService } from '../services/firestoreService';
+import { projectsService } from '../services/supabaseService';
 import { Project } from '../types';
 
 export function DashboardView() {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, Shield, Layout, ChevronRight, CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
-import { fairsService } from '../services/firestoreService';
+import { fairsService } from '../services/supabaseService';
 
 type CreationStep = 'Identidade' | 'Datas' | 'Estrutura' | 'Regras';
 

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Lock, History, Database, Users, Bell, Globe, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { db, auth } from '../firebase';
-import { doc, getDoc, updateDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { cn } from '../lib/utils';
 
 export function SettingsView() {
@@ -11,42 +10,80 @@ export function SettingsView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      if (auth.currentUser) {
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        if (userDoc.exists()) {
-          const instId = userDoc.data().institutionId;
-          const instDoc = await getDoc(doc(db, 'institutions', instId));
-          if (instDoc.exists()) {
-            setSettings(instDoc.data().settings || {});
+    const fetchSettingsAndLogs = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Fetch user profile to get institutionId
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('institutionId')
+          .eq('uid', user.id)
+          .single();
+
+        if (userProfile) {
+          // Fetch institution settings
+          const { data: instData } = await supabase
+            .from('institutions')
+            .select('settings')
+            .eq('id', userProfile.institutionId)
+            .single();
+          
+          if (instData) {
+            setSettings(instData.settings || {});
           }
         }
       }
+
+      // Fetch audit logs
+      const { data: logsData } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(5);
+      
+      if (logsData) {
+        setLogs(logsData);
+      }
+      setLoading(false);
     };
 
-    const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(5));
-    const unsubscribeLogs = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setLogs(data);
-      setLoading(false);
-    });
+    // Real-time subscription for logs
+    const subscription = supabase
+      .channel('audit_logs_changes')
+      .on('postgres_changes' as any, { event: 'INSERT', table: 'audit_logs' }, async () => {
+        const { data } = await supabase
+          .from('audit_logs')
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .limit(5);
+        if (data) setLogs(data);
+      })
+      .subscribe();
 
-    fetchSettings();
-    return () => unsubscribeLogs();
+    fetchSettingsAndLogs();
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const toggleSetting = async (key: string) => {
-    if (!settings || !auth.currentUser) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!settings || !user) return;
     
     const newSettings = { ...settings, [key]: !settings[key] };
     setSettings(newSettings);
 
-    const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-    if (userDoc.exists()) {
-      const instId = userDoc.data().institutionId;
-      await updateDoc(doc(db, 'institutions', instId), {
-        settings: newSettings
-      });
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('institutionId')
+      .eq('uid', user.id)
+      .single();
+
+    if (userProfile) {
+      await supabase
+        .from('institutions')
+        .update({ settings: newSettings })
+        .eq('id', userProfile.institutionId);
     }
   };
 
@@ -132,7 +169,7 @@ export function SettingsView() {
                   </div>
                 </div>
                 <span className="text-[10px] font-bold text-slate-300 uppercase">
-                  {log.timestamp?.toDate().toLocaleTimeString()}
+                  {new Date(log.timestamp).toLocaleTimeString()}
                 </span>
               </div>
             )) : (

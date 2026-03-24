@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { LogIn, Beaker, ShieldCheck, Globe, Loader2, Mail, Lock, UserPlus } from 'lucide-react';
-import { auth, db } from '../firebase';
-import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { FirebaseError } from 'firebase/app';
+import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { doc, setDoc } from 'firebase/firestore';
 
 export function LoginView() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -17,12 +14,22 @@ export function LoginView() {
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      toast.success('Login realizado com sucesso!');
-    } catch (error) {
-      handleAuthError(error);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      toast.success('Redirecionando para o Google...');
+    } catch (error: any) {
+      if (error.message?.includes('For security purposes, you can only request this after')) {
+        const seconds = error.message.match(/\d+/)?.[0] || 'alguns';
+        toast.error(`Muitas tentativas! Por segurança, aguarde ${seconds} segundos antes de tentar novamente.`);
+      } else {
+        toast.error(`Erro: ${error.message}`);
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -37,61 +44,73 @@ export function LoginView() {
       return;
     }
 
+    if (password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     setIsLoggingIn(true);
+    console.log(`Attempting ${mode} for ${email}`);
     try {
       if (mode === 'login') {
-        await signInWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
         toast.success('Login realizado com sucesso!');
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        // Determine role based on email
-        const role = email === 'admin@gmail.com' ? 'admin' : 'student';
-        
-        // Create user profile in Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: name,
-          photoURL: null,
-          role: role,
-          institutionId: 'default-inst'
+        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+            },
+          },
         });
         
-        toast.success('Conta criada com sucesso!');
+        if (signUpError) throw signUpError;
+        
+        if (user) {
+          console.log("User created in Auth, creating profile...", user.id);
+          // Determine role based on email
+          const isAdminEmail = email === 'admin@gmail.com' || email === 'aistudiojhoko@gmail.com';
+          const role = isAdminEmail ? 'admin' : 'student';
+          
+          // Create user profile in Supabase table
+          const { error: insertError } = await supabase.from('users').insert({
+            uid: user.id,
+            email: user.email,
+            displayName: name,
+            photoURL: null,
+            role: role,
+            institutionId: 'default-inst'
+          });
+
+          if (insertError) {
+            console.error("Error creating user profile:", insertError);
+            // We don't throw here because the user is already created in Auth
+            // They might just need to sync later or we can try again
+            toast.warning('Conta criada, mas houve um erro ao salvar seu perfil. Tente entrar novamente.');
+          } else {
+            toast.success('Conta criada com sucesso! Verifique seu e-mail se necessário.');
+          }
+        }
       }
-    } catch (error) {
-      handleAuthError(error);
+    } catch (error: any) {
+      if (error.message === 'Invalid login credentials') {
+        toast.error('E-mail ou senha incorretos. Se ainda não tem uma conta, use a aba "Cadastrar".');
+      } else if (error.message?.includes('For security purposes, you can only request this after')) {
+        const seconds = error.message.match(/\d+/)?.[0] || 'alguns';
+        toast.error(`Muitas tentativas! Por segurança, aguarde ${seconds} segundos antes de tentar novamente.`);
+      } else {
+        toast.error(`Erro: ${error.message}`);
+      }
+      console.error("Auth error:", error);
     } finally {
       setIsLoggingIn(false);
     }
-  };
-
-  const handleAuthError = (error: any) => {
-    if (error instanceof FirebaseError) {
-      switch (error.code) {
-        case 'auth/popup-closed-by-user':
-          toast.error('O login foi cancelado.');
-          break;
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          toast.error('E-mail ou senha incorretos.');
-          break;
-        case 'auth/email-already-in-use':
-          toast.error('Este e-mail já está em uso.');
-          break;
-        case 'auth/weak-password':
-          toast.error('A senha deve ter pelo menos 6 caracteres.');
-          break;
-        default:
-          toast.error(`Erro: ${error.message}`);
-      }
-    } else {
-      toast.error('Ocorreu um erro inesperado.');
-    }
-    console.error("Auth error:", error);
   };
 
   return (
@@ -181,7 +200,11 @@ export function LoginView() {
             disabled={isLoggingIn}
             className="w-full flex items-center justify-center gap-3 bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-70"
           >
-            {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+            {isLoggingIn ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              mode === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />
+            )}
             {mode === 'login' ? (isLoggingIn ? 'Entrando...' : 'Entrar') : (isLoggingIn ? 'Cadastrando...' : 'Criar Conta')}
           </button>
         </form>
@@ -200,7 +223,7 @@ export function LoginView() {
           disabled={isLoggingIn}
           className="w-full flex items-center justify-center gap-3 bg-white border border-slate-100 text-slate-600 py-4 rounded-xl font-bold hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-70"
         >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+          <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
           Entrar com Google
         </button>
 
@@ -213,6 +236,12 @@ export function LoginView() {
             <Globe className="text-blue-600 w-4 h-4" />
             <p className="text-[10px] font-bold text-slate-600 uppercase">Global</p>
           </div>
+        </div>
+
+        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+          <p className="text-[11px] text-amber-700 leading-relaxed">
+            <span className="font-bold">Dica:</span> Se você ainda não criou uma conta neste novo sistema (Supabase), use a aba <span className="font-bold italic">Cadastrar</span> acima.
+          </p>
         </div>
       </motion.div>
     </div>

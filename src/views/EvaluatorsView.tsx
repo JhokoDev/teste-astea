@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserSearch, ShieldCheck, ShieldAlert, EyeOff, Eye, UserPlus, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
-import { db } from '../firebase';
-import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 
 export function EvaluatorsView() {
   const [isBlindMode, setIsBlindMode] = useState(true);
@@ -11,13 +10,26 @@ export function EvaluatorsView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'evaluators'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setEvaluators(data);
+    // Initial fetch
+    supabase.from('evaluators').select('*').then(({ data, error }) => {
+      if (error) console.error('Supabase Error:', error);
+      if (data) setEvaluators(data);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Real-time subscription
+    const subscription = supabase
+      .channel('evaluators_changes')
+      .on('postgres_changes' as any, { event: '*', table: 'evaluators' }, async () => {
+        const { data, error } = await supabase.from('evaluators').select('*');
+        if (error) console.error('Supabase Error:', error);
+        if (data) setEvaluators(data);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   if (loading) {

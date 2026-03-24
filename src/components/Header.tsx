@@ -1,11 +1,19 @@
 import React from 'react';
 import { Search, Bell, ChevronRight, LogOut } from 'lucide-react';
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
+import { supabase } from '../supabase';
+import { useState, useEffect } from 'react';
 
 export function Header() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, []);
+
   const handleLogout = () => {
-    signOut(auth);
+    supabase.auth.signOut();
   };
 
   return (
@@ -35,7 +43,7 @@ export function Header() {
         <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
           <div className="w-10 h-10 rounded-full border-2 border-primary/20 overflow-hidden cursor-pointer hover:border-primary/40 transition-all">
             <img 
-              src={auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100"} 
+              src={user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100"} 
               alt="User profile"
               className="w-full h-full object-cover"
             />
