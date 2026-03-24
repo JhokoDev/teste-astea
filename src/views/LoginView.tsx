@@ -27,6 +27,10 @@ export function LoginView() {
       if (error.message?.includes('For security purposes, you can only request this after')) {
         const seconds = error.message.match(/\d+/)?.[0] || 'alguns';
         toast.error(`Muitas tentativas! Por segurança, aguarde ${seconds} segundos antes de tentar novamente.`);
+      } else if (error.message === 'email rate limit exceeded') {
+        toast.error('Limite de envio de e-mails do Supabase excedido. Tente usar o "Entrar com Google" ou aguarde alguns minutos.');
+      } else if (error.message?.includes('Unsupported provider')) {
+        toast.error('O login com Google não está ativado no painel do Supabase. Por favor, use e-mail e senha ou ative o provedor Google no Supabase.');
       } else {
         toast.error(`Erro: ${error.message}`);
       }
@@ -104,6 +108,10 @@ export function LoginView() {
       } else if (error.message?.includes('For security purposes, you can only request this after')) {
         const seconds = error.message.match(/\d+/)?.[0] || 'alguns';
         toast.error(`Muitas tentativas! Por segurança, aguarde ${seconds} segundos antes de tentar novamente.`);
+      } else if (error.message === 'Email not confirmed') {
+        toast.error('Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada (e a pasta de spam) para o link de ativação.');
+      } else if (error.message === 'email rate limit exceeded') {
+        toast.error('Limite de envio de e-mails do Supabase excedido. Tente usar o "Entrar com Google" ou aguarde alguns minutos.');
       } else {
         toast.error(`Erro: ${error.message}`);
       }
@@ -238,10 +246,15 @@ export function LoginView() {
           </div>
         </div>
 
-        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 space-y-2">
           <p className="text-[11px] text-amber-700 leading-relaxed">
             <span className="font-bold">Dica:</span> Se você ainda não criou uma conta neste novo sistema (Supabase), use a aba <span className="font-bold italic">Cadastrar</span> acima.
           </p>
+          <div className="pt-2 border-t border-amber-200/50">
+            <p className="text-[10px] text-amber-600/80 italic">
+              <span className="font-bold">Dev Admin:</span> Use <span className="font-mono bg-amber-100/50 px-1 rounded">admin@gmail.com</span> para testes de desenvolvimento (cadastre-o primeiro).
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>
