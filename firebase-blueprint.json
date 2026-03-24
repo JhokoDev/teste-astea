@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile and role information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "organizer", "evaluator", "student"] },
+        "institutionId": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "fairs": {
+      "title": "Fair",
+      "description": "Scientific fair configuration",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["rascunho", "publicado"] },
+        "organizerId": { "type": "string" },
+        "institutionId": { "type": "string" },
+        "dates": {
+          "type": "object",
+          "properties": {
+            "registrationStart": { "type": "string", "format": "date-time" },
+            "registrationEnd": { "type": "string", "format": "date-time" },
+            "evaluationStart": { "type": "string", "format": "date-time" },
+            "resultsDate": { "type": "string", "format": "date-time" }
+          }
+        }
+      },
+      "required": ["name", "status", "organizerId", "institutionId"]
+    },
+    "projects": {
+      "title": "Project",
+      "description": "Scientific project submission",
+      "type": "object",
+      "properties": {
+        "fairId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "abstract": { "type": "string" },
+        "status": { "type": "string" },
+        "studentIds": { "type": "array", "items": { "type": "string" } },
+        "mentorId": { "type": "string" },
+        "institutionId": { "type": "string" },
+        "score": { "type": "number" }
+      },
+      "required": ["fairId", "name", "category", "institutionId"]
+    },
+    "evaluators": {
+      "title": "Evaluator",
+      "description": "Evaluator profile and assignment info",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "specialty": { "type": "string" },
+        "institution": { "type": "string" },
+        "projectCount": { "type": "integer" },
+        "hasConflict": { "type": "boolean" },
+        "institutionId": { "type": "string" }
+      },
+      "required": ["name", "email", "institutionId"]
+    },
+    "institutions": {
+      "title": "Institution",
+      "description": "SaaS Tenant / Institution configuration",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "dataIsolation": { "type": "boolean" },
+            "autoAnonymization": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["name"]
+    },
+    "audit_logs": {
+      "title": "Audit Log",
+      "description": "Immutable audit trail of actions",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "target": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "institutionId": { "type": "string" }
+      },
+      "required": ["action", "userId", "timestamp", "institutionId"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "users", "description": "User profiles" },
+    "/fairs/{fairId}": { "schema": "fairs", "description": "Fair configurations" },
+    "/projects/{projectId}": { "schema": "projects", "description": "Project submissions" },
+    "/evaluators/{evaluatorId}": { "schema": "evaluators", "description": "Evaluator profiles" },
+    "/institutions/{institutionId}": { "schema": "institutions", "description": "Institution settings" },
+    "/audit_logs/{logId}": { "schema": "audit_logs", "description": "Audit trail" }
+  }
+}
