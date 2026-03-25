@@ -134,12 +134,23 @@ export function FairsView() {
   };
 
   const addCategory = (cat: string) => {
-    if (!cat) return;
+    if (!cat || formData.structure?.categories.includes(cat)) return;
     setFormData(prev => ({
       ...prev,
       structure: {
         ...prev.structure!,
         categories: [...(prev.structure?.categories || []), cat]
+      }
+    }));
+  };
+
+  const addModality = (mod: string) => {
+    if (!mod || formData.structure?.modalities.includes(mod)) return;
+    setFormData(prev => ({
+      ...prev,
+      structure: {
+        ...prev.structure!,
+        modalities: [...(prev.structure?.modalities || []), mod]
       }
     }));
   };
@@ -303,6 +314,44 @@ export function FairsView() {
                     ))}
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Modalidades (ex: Pesquisa Científica, Protótipo)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      id="modInput"
+                      className="flex-1 bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20" 
+                      placeholder="Nova modalidade..." 
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          addModality((e.target as HTMLInputElement).value);
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }}
+                    />
+                    <button 
+                      onClick={() => {
+                        const input = document.getElementById('modInput') as HTMLInputElement;
+                        addModality(input.value);
+                        input.value = '';
+                      }}
+                      className="p-3 bg-primary/10 text-primary rounded-xl hover:bg-primary/20"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.structure?.modalities.map(mod => (
+                      <span key={mod} className="px-3 py-1 bg-primary/5 text-primary rounded-full text-xs font-bold flex items-center gap-2">
+                        {mod}
+                        <button onClick={() => setFormData(prev => ({...prev, structure: {...prev.structure!, modalities: prev.structure!.modalities.filter(m => m !== mod)}}))}>
+                          <Plus className="w-3 h-3 rotate-45" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -360,6 +409,10 @@ export function FairsView() {
                   <div className="col-span-2">
                     <p className="text-xs font-bold text-slate-400 uppercase">Categorias</p>
                     <p className="font-bold">{formData.structure?.categories.join(', ') || 'Nenhuma'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs font-bold text-slate-400 uppercase">Modalidades</p>
+                    <p className="font-bold">{formData.structure?.modalities.join(', ') || 'Nenhuma'}</p>
                   </div>
                 </div>
                 <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
@@ -427,7 +480,8 @@ export function FairsView() {
                 <span className={cn(
                   "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
                   fair.status === 'publicado' ? "bg-emerald-100 text-emerald-700" : 
-                  fair.status === 'rascunho' ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+                  fair.status === 'pausado' ? "bg-amber-100 text-amber-700" :
+                  fair.status === 'rascunho' ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"
                 )}>
                   {fair.status}
                 </span>
@@ -447,7 +501,64 @@ export function FairsView() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="flex-1 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20">Gerenciar</button>
+                {fair.status === 'rascunho' && (
+                  <button 
+                    onClick={() => {
+                      fairsService.updateFair(fair.id, { status: 'publicado' })
+                        .then(() => toast.success('Feira publicada com sucesso!'))
+                        .catch(() => toast.error('Erro ao publicar feira.'));
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all"
+                  >
+                    Publicar Agora
+                  </button>
+                )}
+                
+                {fair.status === 'publicado' && (
+                  <button 
+                    onClick={() => {
+                      fairsService.updateFair(fair.id, { status: 'pausado' })
+                        .then(() => toast.success('Feira pausada com sucesso!'))
+                        .catch(() => toast.error('Erro ao pausar feira.'));
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all"
+                  >
+                    Pausar
+                  </button>
+                )}
+
+                {fair.status === 'pausado' && (
+                  <>
+                    <button 
+                      onClick={() => {
+                        fairsService.updateFair(fair.id, { status: 'publicado' })
+                          .then(() => toast.success('Feira retomada com sucesso!'))
+                          .catch(() => toast.error('Erro ao retomar feira.'));
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-all"
+                    >
+                      Retomar
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm('Tem certeza que deseja encerrar esta feira? Esta ação não pode ser desfeita.')) {
+                          fairsService.updateFair(fair.id, { status: 'encerrado' })
+                            .then(() => toast.success('Feira encerrada com sucesso!'))
+                            .catch(() => toast.error('Erro ao encerrar feira.'));
+                        }
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-slate-500 text-white text-xs font-bold hover:bg-slate-600 transition-all"
+                    >
+                      Encerrar
+                    </button>
+                  </>
+                )}
+
+                {fair.status === 'encerrado' && (
+                  <div className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold text-center">
+                    Feira Encerrada
+                  </div>
+                )}
                 <button className="px-3 py-2 rounded-xl border border-slate-100 text-slate-400 hover:text-slate-600"><Layout className="w-4 h-4" /></button>
               </div>
             </div>

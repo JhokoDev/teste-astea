@@ -34,7 +34,31 @@ export function ProjectsView() {
     });
     
     const unsubscribeFairs = fairsService.subscribeToFairs((data) => {
-      setFairs(data.filter(f => f.status === 'publicado'));
+      console.log('Fairs received in ProjectsView:', data);
+      const now = new Date();
+      
+      const activeFairs = data.filter(f => {
+        // Only show published fairs
+        const isStatusOk = f.status === 'publicado';
+        
+        // If dates are not set, we show it if status is ok
+        if (!f.dates?.registration_start || !f.dates?.registration_end) return isStatusOk;
+        
+        const start = new Date(f.dates.registration_start);
+        start.setHours(0, 0, 0, 0);
+        
+        const end = new Date(f.dates.registration_end);
+        end.setHours(23, 59, 59, 999);
+        
+        const inRegistrationPeriod = now >= start && now <= end;
+        
+        console.log(`Fair ${f.name}: status=${f.status}, inPeriod=${inRegistrationPeriod}, start=${start}, end=${end}, now=${now}`);
+        
+        return isStatusOk && inRegistrationPeriod;
+      });
+      
+      console.log('Filtered active fairs:', activeFairs);
+      setFairs(activeFairs);
     });
 
     return () => {
@@ -87,7 +111,7 @@ export function ProjectsView() {
               <label className="text-xs font-bold text-slate-500 uppercase">Selecione a Feira</label>
               <select 
                 value={formData.fairId}
-                onChange={e => setFormData({...formData, fairId: e.target.value})}
+                onChange={e => setFormData({...formData, fairId: e.target.value, category: '', modality: ''})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Escolha uma feira ativa...</option>
@@ -120,24 +144,38 @@ export function ProjectsView() {
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-500 uppercase">Categoria</label>
-              <input 
-                type="text" 
+              <select 
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20" 
-                placeholder="Ex: Ciências Exatas" 
-              />
+                disabled={!formData.fairId}
+                className={cn(
+                  "w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20",
+                  !formData.fairId && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <option value="">{formData.fairId ? 'Selecione uma categoria...' : 'Selecione uma feira primeiro'}</option>
+                {formData.fairId && fairs.find(f => f.id === formData.fairId)?.structure?.categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-500 uppercase">Modalidade</label>
-              <input 
-                type="text" 
+              <select 
                 value={formData.modality}
                 onChange={e => setFormData({...formData, modality: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20" 
-                placeholder="Ex: Pesquisa Científica" 
-              />
+                disabled={!formData.fairId}
+                className={cn(
+                  "w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20",
+                  !formData.fairId && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <option value="">{formData.fairId ? 'Selecione uma modalidade...' : 'Selecione uma feira primeiro'}</option>
+                {formData.fairId && fairs.find(f => f.id === formData.fairId)?.structure?.modalities.map(mod => (
+                  <option key={mod} value={mod}>{mod}</option>
+                ))}
+              </select>
             </div>
           </div>
 

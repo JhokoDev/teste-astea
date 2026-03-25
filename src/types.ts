@@ -1,5 +1,5 @@
 export type ProjectStatus = 'rascunho' | 'submetido' | 'aprovado' | 'rejeitado' | 'em_avaliacao' | 'avaliado';
-export type FairStatus = 'rascunho' | 'publicado' | 'encerrado';
+export type FairStatus = 'rascunho' | 'publicado' | 'pausado' | 'encerrado';
 export type UserRole = 'admin' | 'student' | 'evaluator';
 
 export interface User {

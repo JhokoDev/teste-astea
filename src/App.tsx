@@ -11,6 +11,7 @@ import { FairsView } from './views/FairsView';
 import { ProjectsView } from './views/ProjectsView';
 import { EvaluatorsView } from './views/EvaluatorsView';
 import { SettingsView } from './views/SettingsView';
+import { ProfileView } from './views/ProfileView';
 import { LoginView } from './views/LoginView';
 import { Plus, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -107,6 +108,7 @@ export default function App() {
       case 'projetos': return <ProjectsView />;
       case 'avaliadores': return <EvaluatorsView />;
       case 'configuracoes': return <SettingsView />;
+      case 'perfil': return <ProfileView />;
       default: return <DashboardView />;
     }
   };
