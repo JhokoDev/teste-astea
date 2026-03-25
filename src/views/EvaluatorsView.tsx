@@ -1,18 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { UserSearch, ShieldCheck, ShieldAlert, EyeOff, Eye, UserPlus, CheckCircle2, AlertCircle, Loader2, Star, MessageSquare } from 'lucide-react';
+import { UserSearch, ShieldCheck, ShieldAlert, EyeOff, Eye, UserPlus, CheckCircle2, AlertCircle, Loader2, Star, MessageSquare, Trash2, Shield, User as UserIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
 import { evaluationsService, projectsService } from '../services/supabaseService';
-import { Project, Evaluation } from '../types';
+import { Project, Evaluation, UserRole, User } from '../types';
 import { toast } from 'sonner';
 
-export function EvaluatorsView() {
+interface EvaluatorsViewProps {
+  profile?: User | null;
+}
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Administrador',
+  manager: 'Gerenciador de Feira',
+  advisor: 'Orientador',
+  evaluator: 'Avaliador',
+  student: 'Aluno'
+};
+
+export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
+  const userRole = profile?.role || 'student';
   const [isBlindMode, setIsBlindMode] = useState(true);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [evaluators, setEvaluators] = useState<any[]>([]);
   const [assignedProjects, setAssignedProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Evaluation Form State
   const [evaluationData, setEvaluationData] = useState<Partial<Evaluation>>({
@@ -22,32 +37,78 @@ export function EvaluatorsView() {
   });
 
   useEffect(() => {
-    // Initial fetch for evaluators
-    supabase.from('users').select('*').eq('role', 'evaluator').then(({ data, error }) => {
-      if (error) console.error('Supabase Error:', error);
-      if (data) setEvaluators(data);
-      setLoading(false);
-    });
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        if (userRole === 'admin') {
+          // Admins see everyone
+          const { data: users, error } = await supabase.from('users').select('*').order('displayName');
+          if (error) throw error;
+          setAllUsers(users || []);
+        } else if (userRole === 'manager' && profile?.institutionId) {
+          // Managers strictly see users from their own institution
+          const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('institutionId', profile.institutionId)
+            .order('displayName');
+          
+          if (usersError) throw usersError;
+          setAllUsers(users || []);
+        }
 
-    // Fetch projects assigned to the current evaluator (mocked for now)
-    projectsService.subscribeToProjects((data) => {
-      setAssignedProjects(data.slice(0, 3)); // Mocking assignments
-    });
+        // Fetch evaluators for the summary/list (filtered by institution for managers)
+        let evalsQuery = supabase.from('users').select('*').eq('role', 'evaluator');
+        if (userRole === 'manager' && profile?.institutionId) {
+          evalsQuery = evalsQuery.eq('institutionId', profile.institutionId);
+        }
+        const { data: evals, error: evalsError } = await evalsQuery;
+        if (evalsError) throw evalsError;
+        setEvaluators(evals || []);
 
-    // Real-time subscription for evaluators
+        // Fetch projects assigned to the current evaluator
+        if (profile?.uid) {
+          // In a real app, we'd filter by evaluatorId
+          projectsService.subscribeToProjects((data) => {
+            setAssignedProjects(data.slice(0, 3)); // Mocking assignments
+          });
+        }
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        toast.error('Erro ao carregar dados.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    // Real-time subscription for users
     const subscription = supabase
-      .channel('evaluators_changes')
-      .on('postgres_changes' as any, { event: '*', table: 'users', filter: "role=eq.evaluator" }, async () => {
-        const { data, error } = await supabase.from('users').select('*').eq('role', 'evaluator');
-        if (error) console.error('Supabase Error:', error);
-        if (data) setEvaluators(data);
+      .channel('users_management')
+      .on('postgres_changes' as any, { event: '*', table: 'users' }, () => {
+        fetchData(); // Re-fetch with filters
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [userRole, profile?.uid, profile?.institutionId]);
+
+  const handleUpdateRole = async (userId: string, newRole: UserRole) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ role: newRole })
+        .eq('uid', userId);
+      
+      if (error) throw error;
+      toast.success(`Usuário atualizado para ${ROLE_LABELS[newRole]}`);
+    } catch (error: any) {
+      toast.error('Erro ao atualizar cargo.');
+    }
+  };
 
   const handleSubmitEvaluation = async () => {
     if (!selectedProject) return;
@@ -75,7 +136,13 @@ export function EvaluatorsView() {
     }
   };
 
+  const filteredUsers = allUsers.filter(u => 
+    u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (selectedProject) {
+    // ... (keep existing evaluation form logic)
     return (
       <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-6 lg:space-y-8">
         <div className="flex items-center gap-4">
@@ -175,6 +242,136 @@ export function EvaluatorsView() {
     );
   }
 
+  // Management View for Managers/Admins
+  if (userRole === 'admin' || userRole === 'manager') {
+    return (
+      <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Gestão de Usuários e Avaliadores</h2>
+            <p className="text-xs lg:text-sm text-slate-500">Promova usuários a avaliadores ou gerencie permissões.</p>
+          </div>
+          <button className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 shadow-md flex items-center justify-center gap-2">
+            <UserPlus className="w-4 h-4" />
+            Convidar Avaliador
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="bg-white elevation-1 rounded-2xl p-4 flex items-center gap-3">
+              <UserSearch className="w-5 h-5 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Buscar por nome ou e-mail..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-sm"
+              />
+            </div>
+
+            <div className="bg-white elevation-1 rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Usuário</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Cargo Atual</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {filteredUsers.map(user => (
+                      <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                              {user.displayName?.charAt(0) || user.email?.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{user.displayName}</p>
+                              <p className="text-xs text-slate-500">{user.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
+                            user.role === 'admin' && "bg-purple-100 text-purple-700",
+                            user.role === 'manager' && "bg-blue-100 text-blue-700",
+                            user.role === 'evaluator' && "bg-emerald-100 text-emerald-700",
+                            user.role === 'advisor' && "bg-amber-100 text-amber-700",
+                            user.role === 'student' && "bg-slate-100 text-slate-700"
+                          )}>
+                            {ROLE_LABELS[user.role as UserRole] || user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            {user.role !== 'evaluator' ? (
+                              <button 
+                                onClick={() => handleUpdateRole(user.uid, 'evaluator')}
+                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                title="Promover a Avaliador"
+                              >
+                                <ShieldCheck className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleUpdateRole(user.uid, 'student')}
+                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                title="Rebaixar a Aluno"
+                              >
+                                <ShieldAlert className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                Resumo da Banca
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                  <span className="text-sm text-slate-600">Total de Avaliadores</span>
+                  <span className="text-lg font-bold text-primary">{evaluators.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                  <span className="text-sm text-slate-600">Aguardando Convite</span>
+                  <span className="text-lg font-bold text-slate-400">0</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 space-y-3">
+              <div className="flex items-center gap-2 text-primary">
+                <CheckCircle2 className="w-5 h-5" />
+                <h4 className="font-bold text-sm">Dica de Gestão</h4>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Você pode promover qualquer usuário cadastrado para o cargo de avaliador clicando no ícone de escudo verde.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default View for Evaluators
   return (
     <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

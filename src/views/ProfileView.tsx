@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Shield, Building, Camera, Loader2, Save, Key, Bell, Palette } from 'lucide-react';
+import { User, Mail, Shield, Building, Camera, Loader2, Save, Key, Bell, Palette, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
 import { toast } from 'sonner';
+import { UserRole } from '../types';
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Administrador',
+  manager: 'Gerenciador de Feira',
+  advisor: 'Orientador',
+  evaluator: 'Avaliador',
+  student: 'Padrão (Aluno)'
+};
 
 export function ProfileView() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [displayName, setDisplayName] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -19,6 +29,7 @@ export function ProfileView() {
         setUser(mock);
         setProfile(mock);
         setDisplayName(mock.displayName || '');
+        setSelectedRole(mock.role || 'student');
         return;
       }
 
@@ -34,6 +45,7 @@ export function ProfileView() {
         if (profile) {
           setProfile(profile);
           setDisplayName(profile.displayName || '');
+          setSelectedRole(profile.role || 'student');
         }
       }
     };
@@ -45,10 +57,11 @@ export function ProfileView() {
       setLoading(true);
       if (localStorage.getItem('dev_user')) {
         const mock = JSON.parse(localStorage.getItem('dev_user')!);
-        const updated = { ...mock, displayName };
+        const updated = { ...mock, displayName, role: selectedRole };
         localStorage.setItem('dev_user', JSON.stringify(updated));
         setProfile(updated);
-        toast.success('Perfil atualizado com sucesso!');
+        toast.success('Perfil atualizado com sucesso! Recarregue para aplicar mudanças de permissão.');
+        setTimeout(() => window.location.reload(), 1500);
         return;
       }
 
@@ -99,7 +112,9 @@ export function ProfileView() {
             </div>
             <div>
               <h3 className="font-bold text-lg text-slate-900">{profile.displayName}</h3>
-              <p className="text-xs font-bold text-primary uppercase tracking-wider">{profile.role}</p>
+              <p className="text-xs font-bold text-primary uppercase tracking-wider">
+                {ROLE_LABELS[profile.role as UserRole] || profile.role}
+              </p>
             </div>
             <div className="pt-4 border-t border-slate-50 space-y-3">
               <div className="flex items-center gap-3 text-sm text-slate-600">
@@ -120,7 +135,7 @@ export function ProfileView() {
             </h4>
             <div className="p-3 bg-primary/5 rounded-xl border border-primary/10">
               <p className="text-xs text-primary font-medium leading-relaxed">
-                Você possui permissões de <strong>{profile.role}</strong>. Algumas configurações avançadas podem estar restritas.
+                Você possui permissões de <strong>{ROLE_LABELS[profile.role as UserRole] || profile.role}</strong>. Algumas configurações avançadas podem estar restritas.
               </p>
             </div>
           </div>
@@ -146,6 +161,22 @@ export function ProfileView() {
                     placeholder="Seu nome completo" 
                   />
                 </div>
+                
+                {localStorage.getItem('dev_user') && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Nível de Acesso (Mock Only)</label>
+                    <select 
+                      value={selectedRole}
+                      onChange={e => setSelectedRole(e.target.value as UserRole)}
+                      className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">E-mail (Não editável)</label>
                   <input 

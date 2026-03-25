@@ -25,18 +25,19 @@ export function ProjectTable({ projects }: { projects: Project[] }) {
                 {project.title}
               </td>
               <td className="py-4 text-slate-600">
-                {project.fairId}
+                {project.category}
               </td>
               <td className="py-4 font-bold text-slate-900">
-                {project.current_version}
+                v{project.current_version}
               </td>
               <td className="py-4">
                 <span className={cn(
-                  "px-3 py-1 rounded-full text-xs font-bold",
-                  project.status === 'avaliado' && "bg-emerald-100 text-emerald-700",
+                  "px-3 py-1 rounded-full text-xs font-bold uppercase",
+                  project.status === 'aprovado' && "bg-emerald-100 text-emerald-700",
                   project.status === 'em_avaliacao' && "bg-amber-100 text-amber-700",
                   project.status === 'submetido' && "bg-blue-100 text-blue-700",
-                  project.status === 'rascunho' && "bg-slate-100 text-slate-700"
+                  project.status === 'rascunho' && "bg-slate-100 text-slate-700",
+                  project.status === 'rejeitado' && "bg-red-100 text-red-700"
                 )}>
                   {project.status}
                 </span>

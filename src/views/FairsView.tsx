@@ -3,16 +3,23 @@ import { Plus, Calendar, Shield, Layout, ChevronRight, CheckCircle2, Clock, Load
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
-import { Fair, EvaluationCriteria } from '../types';
+import { Fair, EvaluationCriteria, User } from '../types';
 import { toast } from 'sonner';
 
 type CreationStep = 'Identidade' | 'Datas' | 'Estrutura' | 'Regras' | 'Revisão';
 
-export function FairsView() {
+interface FairsViewProps {
+  profile?: User | null;
+}
+
+export function FairsView({ profile }: FairsViewProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [currentStep, setCurrentStep] = useState<CreationStep>('Identidade');
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const userRole = profile?.role || 'student';
+  const userId = profile?.uid;
 
   // Form State
   const [formData, setFormData] = useState<Partial<Fair>>({
@@ -41,11 +48,19 @@ export function FairsView() {
 
   useEffect(() => {
     const unsubscribe = fairsService.subscribeToFairs((data) => {
-      setFairs(data);
+      // Filter fairs if manager
+      if (userRole === 'manager') {
+        setFairs(data.filter(f => f.organizerId === userId || f.organizerId === null)); // null for mock/legacy
+      } else if (userRole === 'admin') {
+        setFairs(data);
+      } else {
+        // Other roles might only see published fairs or nothing in this view
+        setFairs(data.filter(f => f.status === 'publicado'));
+      }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [userRole, userId]);
 
   const steps: CreationStep[] = ['Identidade', 'Datas', 'Estrutura', 'Regras', 'Revisão'];
 
@@ -104,7 +119,11 @@ export function FairsView() {
       console.log('FairsView: Iniciando criação de feira:', formData);
       const toastId = toast.loading('Criando feira no banco de dados...');
       
-      const result = await fairsService.createFair(formData);
+      const result = await fairsService.createFair({
+        ...formData,
+        organizerId: profile?.uid,
+        institutionId: profile?.institutionId
+      });
       console.log('FairsView: Resultado da criação:', result);
       
       toast.dismiss(toastId);
@@ -452,13 +471,15 @@ export function FairsView() {
     <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Gestão de Feiras</h2>
-        <button 
-          onClick={() => setIsCreating(true)}
-          className="w-full sm:w-auto bg-primary text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold shadow-md hover:scale-105 transition-all"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nova Feira</span>
-        </button>
+        {(userRole === 'admin' || userRole === 'manager') && (
+          <button 
+            onClick={() => setIsCreating(true)}
+            className="w-full sm:w-auto bg-primary text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold shadow-md hover:scale-105 transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nova Feira</span>
+          </button>
+        )}
       </div>
 
       {loading ? (

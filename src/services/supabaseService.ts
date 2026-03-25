@@ -282,3 +282,25 @@ export const evaluationsService = {
     return newEval as Evaluation;
   }
 };
+
+export const usersService = {
+  subscribeToUsers: (callback: (users: any[]) => void) => {
+    supabase.from('users').select('*').then(({ data, error }) => {
+      if (error) handleSupabaseError(error, OperationType.LIST, 'users');
+      if (data) callback(data);
+    });
+
+    const subscription = supabase
+      .channel('users_changes')
+      .on('postgres_changes' as any, { event: '*', table: 'users' }, async () => {
+        const { data, error } = await supabase.from('users').select('*');
+        if (error) handleSupabaseError(error, OperationType.LIST, 'users');
+        if (data) callback(data);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }
+};

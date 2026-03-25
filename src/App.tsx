@@ -8,6 +8,7 @@ import { Sidebar, TabId } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './views/DashboardView';
 import { FairsView } from './views/FairsView';
+import { ExploreFairsView } from './views/ExploreFairsView';
 import { ProjectsView } from './views/ProjectsView';
 import { EvaluatorsView } from './views/EvaluatorsView';
 import { SettingsView } from './views/SettingsView';
@@ -20,7 +21,8 @@ import { Toaster } from 'sonner';
 import { cn } from './lib/utils';
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('painel');
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -38,7 +40,8 @@ export default function App() {
           window.location.reload();
           return;
         }
-        setUser(mockUser);
+        setAuthUser(mockUser);
+        setProfile(mockUser);
         setLoading(false);
         setIsAuthReady(true);
         return;
@@ -49,8 +52,8 @@ export default function App() {
 
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+      setAuthUser(session?.user ?? null);
+      if (!session) setLoading(false);
     });
 
     // Listen for auth changes
@@ -58,8 +61,11 @@ export default function App() {
       // If we have a dev user, don't let Supabase override it unless it's a real login
       if (localStorage.getItem('dev_user') && !session) return;
       
-      setUser(session?.user ?? null);
-      setLoading(false);
+      setAuthUser(session?.user ?? null);
+      if (!session) {
+        setProfile(null);
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -67,31 +73,35 @@ export default function App() {
 
   useEffect(() => {
     const syncUser = async () => {
-      if (user && !localStorage.getItem('dev_user')) {
+      if (authUser && !localStorage.getItem('dev_user')) {
         const { data: userProfile, error } = await supabase
           .from('users')
           .select('*')
-          .eq('uid', user.id)
+          .eq('uid', authUser.id)
           .single();
 
         if (error && error.code === 'PGRST116') { // Not found
-          const isAdminEmail = user.email === 'admin@gmail.com' || user.email === 'aistudiojhoko@gmail.com';
-          await supabase.from('users').insert({
-            uid: user.id,
-            email: user.email,
-            displayName: user.user_metadata?.full_name || user.email?.split('@')[0],
-            photoURL: user.user_metadata?.avatar_url,
+          const isAdminEmail = authUser.email === 'admin@gmail.com' || authUser.email === 'aistudiojhoko@gmail.com';
+          const { data: newProfile } = await supabase.from('users').insert({
+            uid: authUser.id,
+            email: authUser.email,
+            displayName: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+            photoURL: authUser.user_metadata?.avatar_url,
             role: isAdminEmail ? 'admin' : 'student',
             institutionId: 'default-inst'
-          });
+          }).select().single();
+          setProfile(newProfile);
+        } else if (userProfile) {
+          setProfile(userProfile);
         }
+        setLoading(false);
         setIsAuthReady(true);
       } else {
         setIsAuthReady(false);
       }
     };
-    if (!loading) syncUser();
-  }, [user, loading]);
+    if (authUser || !loading) syncUser();
+  }, [authUser, loading]);
 
   if (loading) {
     return (
@@ -103,21 +113,22 @@ export default function App() {
 
   const renderView = () => {
     switch (activeTab) {
-      case 'painel': return <DashboardView />;
-      case 'feiras': return <FairsView />;
-      case 'projetos': return <ProjectsView />;
-      case 'avaliadores': return <EvaluatorsView />;
+      case 'painel': return <DashboardView userRole={profile?.role} userId={profile?.uid} />;
+      case 'feiras': return <FairsView profile={profile} />;
+      case 'explorar': return <ExploreFairsView profile={profile} />;
+      case 'projetos': return <ProjectsView profile={profile} />;
+      case 'avaliadores': return <EvaluatorsView profile={profile} />;
       case 'configuracoes': return <SettingsView />;
       case 'perfil': return <ProfileView />;
-      default: return <DashboardView />;
+      default: return <DashboardView userRole={profile?.role} userId={profile?.uid} />;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-[#FBFDF9]">
+    <div className={cn("min-h-screen bg-[#FBFDF9]", authUser && "flex")}>
       <Toaster position="top-right" richColors />
       
-      {!user ? (
+      {!authUser ? (
         <LoginView />
       ) : (
         <>
@@ -142,6 +153,7 @@ export default function App() {
               activeTab={activeTab} 
               onTabChange={setActiveTab}
               onClose={() => setIsMobileSidebarOpen(false)}
+              userRole={profile?.role}
             />
           </div>
           

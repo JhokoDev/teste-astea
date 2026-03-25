@@ -12,24 +12,27 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
+import { UserRole } from '../types';
 
-export type TabId = 'painel' | 'feiras' | 'projetos' | 'avaliadores' | 'configuracoes' | 'perfil';
+export type TabId = 'painel' | 'feiras' | 'explorar' | 'projetos' | 'avaliadores' | 'configuracoes' | 'perfil';
 
-const navItems: { icon: any; label: string; id: TabId }[] = [
-  { icon: LayoutDashboard, label: 'Painel', id: 'painel' },
-  { icon: CalendarDays, label: 'Feiras', id: 'feiras' },
-  { icon: FileText, label: 'Projetos', id: 'projetos' },
-  { icon: Users, label: 'Avaliadores', id: 'avaliadores' },
-  { icon: Settings, label: 'Configurações', id: 'configuracoes' },
+const navItems: { icon: any; label: string; id: TabId; roles: UserRole[] }[] = [
+  { icon: LayoutDashboard, label: 'Painel', id: 'painel', roles: ['admin', 'manager', 'advisor', 'evaluator', 'student'] },
+  { icon: CalendarDays, label: 'Feiras', id: 'feiras', roles: ['admin', 'manager'] },
+  { icon: CalendarDays, label: 'Explorar Feiras', id: 'explorar', roles: ['admin', 'manager', 'advisor', 'evaluator', 'student'] },
+  { icon: FileText, label: 'Projetos', id: 'projetos', roles: ['admin', 'manager', 'advisor', 'evaluator', 'student'] },
+  { icon: Users, label: 'Avaliadores', id: 'avaliadores', roles: ['admin', 'manager'] },
+  { icon: Settings, label: 'Configurações', id: 'configuracoes', roles: ['admin'] },
 ];
 
 interface SidebarProps {
   activeTab: TabId;
   onTabChange: (id: TabId) => void;
   onClose?: () => void;
+  userRole?: UserRole;
 }
 
-export function Sidebar({ activeTab, onTabChange, onClose }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, onClose, userRole = 'student' }: SidebarProps) {
   const handleLogout = async () => {
     localStorage.removeItem('dev_user');
     await supabase.auth.signOut();
@@ -40,6 +43,8 @@ export function Sidebar({ activeTab, onTabChange, onClose }: SidebarProps) {
     onTabChange(id);
     if (onClose) onClose();
   };
+
+  const filteredNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
     <aside className="w-64 bg-background-light border-r border-primary/10 flex flex-col justify-between p-4 sticky top-0 h-screen">
@@ -55,7 +60,7 @@ export function Sidebar({ activeTab, onTabChange, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex flex-col gap-1">
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id)}

@@ -58,18 +58,35 @@ export function LoginView() {
     try {
       if (mode === 'login') {
         // Hardcoded bypass for development
-        if (email === 'admin@ifmaker.com' && password === 'iLy831104') {
-          const mockUser = {
+        const mockUsers: Record<string, any> = {
+          'admin@ifmaker.com': {
             id: '00000000-0000-0000-0000-000000000000',
             email: 'admin@ifmaker.com',
-            user_metadata: {
-              full_name: 'Admin IFMaker (Dev)',
-            },
-            role: 'admin'
-          };
-          localStorage.setItem('dev_user', JSON.stringify(mockUser));
-          toast.success('Login de desenvolvedor realizado!');
-          // Force a page reload to refresh App state with the new localStorage item
+            user_metadata: { full_name: 'Admin IFMaker (Dev)' },
+            role: 'admin',
+            password: 'iLy831104'
+          },
+          'user@gmail.com': {
+            id: '11111111-1111-1111-1111-111111111111',
+            email: 'user@gmail.com',
+            user_metadata: { full_name: 'Aluno Teste (Dev)' },
+            role: 'student',
+            password: 'mudar123'
+          },
+          'gerenciador@gmail.com': {
+            id: '22222222-2222-2222-2222-222222222222',
+            email: 'gerenciador@gmail.com',
+            user_metadata: { full_name: 'Gerenciador Teste (Dev)' },
+            role: 'manager',
+            password: 'mudar123'
+          }
+        };
+
+        const mockUser = mockUsers[email];
+        if (mockUser && password === mockUser.password) {
+          const { password: _, ...userToStore } = mockUser;
+          localStorage.setItem('dev_user', JSON.stringify(userToStore));
+          toast.success(`Login de ${mockUser.role} realizado!`);
           window.location.reload();
           return;
         }
@@ -139,11 +156,11 @@ export function LoginView() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FBFDF9] p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#FBFDF9] p-4">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100"
+        className="max-w-md w-full mx-auto bg-white elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100"
       >
         <div className="text-center space-y-2">
           <div className="inline-flex bg-primary rounded-2xl p-3 sm:p-4 mb-2 sm:mb-4 shadow-sm">
@@ -267,9 +284,15 @@ export function LoginView() {
           <p className="text-[11px] text-amber-700 leading-relaxed">
             <span className="font-bold">Dica:</span> Se você ainda não criou uma conta neste novo sistema (Supabase), use a aba <span className="font-bold italic">Cadastrar</span> acima.
           </p>
-          <div className="pt-2 border-t border-amber-200/50">
+          <div className="pt-2 border-t border-amber-200/50 space-y-1">
             <p className="text-[10px] text-amber-600/80 italic">
-              <span className="font-bold">Dev Admin:</span> Use <span className="font-mono bg-amber-100/50 px-1 rounded">admin@gmail.com</span> para testes de desenvolvimento (cadastre-o primeiro).
+              <span className="font-bold">Admin:</span> <span className="font-mono bg-amber-100/50 px-1 rounded">admin@ifmaker.com</span> / <span className="font-mono bg-amber-100/50 px-1 rounded">iLy831104</span>
+            </p>
+            <p className="text-[10px] text-amber-600/80 italic">
+              <span className="font-bold">Aluno:</span> <span className="font-mono bg-amber-100/50 px-1 rounded">user@gmail.com</span> / <span className="font-mono bg-amber-100/50 px-1 rounded">mudar123</span>
+            </p>
+            <p className="text-[10px] text-amber-600/80 italic">
+              <span className="font-bold">Gerenciador:</span> <span className="font-mono bg-amber-100/50 px-1 rounded">gerenciador@gmail.com</span> / <span className="font-mono bg-amber-100/50 px-1 rounded">mudar123</span>
             </p>
           </div>
         </div>

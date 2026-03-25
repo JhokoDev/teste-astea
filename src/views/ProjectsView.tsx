@@ -3,15 +3,22 @@ import { Search, Filter, Download, History, Users, FileText, ExternalLink, Chevr
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { projectsService, fairsService } from '../services/supabaseService';
-import { Project, Fair } from '../types';
+import { Project, Fair, User } from '../types';
 import { toast } from 'sonner';
 
-export function ProjectsView() {
+interface ProjectsViewProps {
+  profile?: User | null;
+}
+
+export function ProjectsView({ profile }: ProjectsViewProps) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const userRole = profile?.role || 'student';
+  const userId = profile?.uid;
 
   // Submission Form State
   const [formData, setFormData] = useState<Partial<Project>>({
@@ -29,7 +36,17 @@ export function ProjectsView() {
 
   useEffect(() => {
     const unsubscribeProjects = projectsService.subscribeToProjects((data) => {
-      setProjects(data);
+      // Filter projects based on role
+      if (userRole === 'admin') {
+        setProjects(data);
+      } else if (userRole === 'manager') {
+        // We'll filter this after fairs are loaded or use institutionId
+        setProjects(data.filter(p => p.institutionId === profile?.institutionId));
+      } else if (userRole === 'student' || userRole === 'advisor') {
+        setProjects(data.filter(p => p.creatorId === userId || p.members.some(m => m.email === profile?.email)));
+      } else {
+        setProjects(data);
+      }
       setLoading(false);
     });
     
@@ -37,8 +54,17 @@ export function ProjectsView() {
       console.log('Fairs received in ProjectsView:', data);
       const now = new Date();
       
-      const activeFairs = data.filter(f => {
-        // Only show published fairs
+      // Filter fairs for the submission form
+      let filteredFairs = data;
+      if (userRole === 'manager') {
+        filteredFairs = data.filter(f => f.organizerId === userId || f.organizerId === null);
+      } else if (userRole === 'student' || userRole === 'advisor') {
+        // Students can only see published fairs in registration period
+        filteredFairs = data.filter(f => f.status === 'publicado');
+      }
+
+      const activeFairs = filteredFairs.filter(f => {
+        // Only show published fairs for submission
         const isStatusOk = f.status === 'publicado';
         
         // If dates are not set, we show it if status is ok
@@ -52,12 +78,9 @@ export function ProjectsView() {
         
         const inRegistrationPeriod = now >= start && now <= end;
         
-        console.log(`Fair ${f.name}: status=${f.status}, inPeriod=${inRegistrationPeriod}, start=${start}, end=${end}, now=${now}`);
-        
         return isStatusOk && inRegistrationPeriod;
       });
       
-      console.log('Filtered active fairs:', activeFairs);
       setFairs(activeFairs);
     });
 
@@ -65,7 +88,7 @@ export function ProjectsView() {
       unsubscribeProjects();
       unsubscribeFairs();
     };
-  }, []);
+  }, [userRole, userId, profile?.email, profile?.institutionId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +99,11 @@ export function ProjectsView() {
 
     try {
       setLoading(true);
-      await projectsService.submitProject(formData as any);
+      await projectsService.submitProject({
+        ...formData,
+        creatorId: userId,
+        institutionId: profile?.institutionId
+      } as any);
       toast.success('Projeto submetido com sucesso!');
       setIsSubmitting(false);
       setFormData({

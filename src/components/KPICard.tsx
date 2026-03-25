@@ -1,5 +1,18 @@
 import React from 'react';
-import { Rocket, GraduationCap, Search as UserSearch, Timer, TrendingUp, TrendingDown } from 'lucide-react';
+import { 
+  Rocket, 
+  GraduationCap, 
+  Search as UserSearch, 
+  Timer, 
+  TrendingUp, 
+  TrendingDown,
+  FileText,
+  Calendar,
+  Users,
+  CheckCircle,
+  Clock,
+  Star
+} from 'lucide-react';
 import { KPI } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -9,6 +22,12 @@ const iconMap = {
   GraduationCap,
   UserSearch,
   Timer,
+  FileText,
+  Calendar,
+  Users,
+  CheckCircle,
+  Clock,
+  Star
 };
 
 interface KPICardProps {
@@ -47,6 +66,20 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi }) => {
         <div className="flex items-center gap-1 text-red-500 text-xs font-bold">
           <Timer className="w-3 h-3" />
           <span>Crítico</span>
+        </div>
+      )}
+
+      {kpi.status === 'Atenção' && (
+        <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
+          <Timer className="w-3 h-3" />
+          <span>Atenção</span>
+        </div>
+      )}
+
+      {kpi.status === 'Normal' && (
+        <div className="flex items-center gap-1 text-emerald-500 text-xs font-bold">
+          <CheckCircle className="w-3 h-3" />
+          <span>Normal</span>
         </div>
       )}
     </motion.div>
