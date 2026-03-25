@@ -60,7 +60,7 @@ export function LoginView() {
         // Hardcoded bypass for development
         if (email === 'admin@ifmaker.com' && password === 'iLy831104') {
           const mockUser = {
-            id: 'dev-admin-id',
+            id: '00000000-0000-0000-0000-000000000000',
             email: 'admin@ifmaker.com',
             user_metadata: {
               full_name: 'Admin IFMaker (Dev)',

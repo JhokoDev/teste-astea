@@ -18,12 +18,12 @@ export function EvaluatorsView() {
   const [evaluationData, setEvaluationData] = useState<Partial<Evaluation>>({
     scores: {},
     feedback: '',
-    declared_conflict: false
+    is_conflict_declared: false
   });
 
   useEffect(() => {
     // Initial fetch for evaluators
-    supabase.from('evaluators').select('*').then(({ data, error }) => {
+    supabase.from('users').select('*').eq('role', 'evaluator').then(({ data, error }) => {
       if (error) console.error('Supabase Error:', error);
       if (data) setEvaluators(data);
       setLoading(false);
@@ -37,8 +37,8 @@ export function EvaluatorsView() {
     // Real-time subscription for evaluators
     const subscription = supabase
       .channel('evaluators_changes')
-      .on('postgres_changes' as any, { event: '*', table: 'evaluators' }, async () => {
-        const { data, error } = await supabase.from('evaluators').select('*');
+      .on('postgres_changes' as any, { event: '*', table: 'users', filter: "role=eq.evaluator" }, async () => {
+        const { data, error } = await supabase.from('users').select('*').eq('role', 'evaluator');
         if (error) console.error('Supabase Error:', error);
         if (data) setEvaluators(data);
       })
@@ -54,16 +54,20 @@ export function EvaluatorsView() {
     
     try {
       setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      const mockUserStr = localStorage.getItem('dev_user');
+      const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
+      const userId = user?.id || mockUser?.id;
+
       await evaluationsService.submitEvaluation({
         ...evaluationData,
-        project_id: selectedProject.id,
-        fair_id: selectedProject.fair_id,
-        evaluator_id: 'current-user-id' // In real app, get from auth
+        projectId: selectedProject.id,
+        evaluatorId: userId
       } as any);
       
       toast.success('Avaliação submetida com sucesso!');
       setSelectedProject(null);
-      setEvaluationData({ scores: {}, feedback: '', declared_conflict: false });
+      setEvaluationData({ scores: {}, feedback: '', is_conflict_declared: false });
     } catch (error) {
       toast.error('Erro ao submeter avaliação.');
     } finally {
@@ -78,7 +82,7 @@ export function EvaluatorsView() {
           <button onClick={() => setSelectedProject(null)} className="text-slate-400 hover:text-primary transition-colors">
             <ShieldAlert className="w-6 h-6 rotate-180" />
           </button>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Avaliar: {selectedProject.name}</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Avaliar: {selectedProject.title}</h2>
         </div>
 
         <div className="bg-white elevation-1 rounded-2xl p-6 lg:p-8 space-y-8">
@@ -92,17 +96,17 @@ export function EvaluatorsView() {
               </div>
             </div>
             <button 
-              onClick={() => setEvaluationData({...evaluationData, declared_conflict: !evaluationData.declared_conflict})}
+              onClick={() => setEvaluationData({...evaluationData, is_conflict_declared: !evaluationData.is_conflict_declared})}
               className={cn(
                 "px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                evaluationData.declared_conflict ? "bg-amber-600 text-white" : "bg-white text-amber-600 border border-amber-200"
+                evaluationData.is_conflict_declared ? "bg-amber-600 text-white" : "bg-white text-amber-600 border border-amber-200"
               )}
             >
-              {evaluationData.declared_conflict ? 'Conflito Declarado' : 'Declarar Conflito'}
+              {evaluationData.is_conflict_declared ? 'Conflito Declarado' : 'Declarar Conflito'}
             </button>
           </div>
 
-          {!evaluationData.declared_conflict && (
+          {!evaluationData.is_conflict_declared && (
             <>
               {/* Criteria (RF04, RF08) */}
               <div className="space-y-6">
@@ -197,7 +201,7 @@ export function EvaluatorsView() {
           {assignedProjects.map(project => (
             <div key={project.id} className="bg-white elevation-1 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h3 className="font-bold text-slate-900">{project.name}</h3>
+                <h3 className="font-bold text-slate-900">{project.title}</h3>
                 <p className="text-xs text-slate-400 uppercase font-bold">{project.category}</p>
               </div>
               <button 

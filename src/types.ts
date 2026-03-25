@@ -48,7 +48,7 @@ export interface Fair {
 
 export interface EvaluationCriteria {
   id: string;
-  fair_id: string;
+  fairId: string;
   category?: string;
   name: string;
   description?: string;
@@ -59,12 +59,12 @@ export interface EvaluationCriteria {
 
 export interface Project {
   id: string;
-  name: string;
+  title: string;
   abstract?: string;
   category: string;
   modality: string;
   status: ProjectStatus;
-  fair_id: string;
+  fairId: string;
   institutionId: string;
   creatorId: string;
   members: ProjectMember[];
@@ -105,13 +105,12 @@ export interface ProjectVersion {
 
 export interface Evaluation {
   id: string;
-  project_id: string;
-  evaluator_id: string;
-  fair_id: string;
+  projectId: string;
+  evaluatorId: string;
   scores: Record<string, number>;
   feedback?: string;
   status: 'rascunho' | 'finalizado';
-  declared_conflict: boolean;
+  is_conflict_declared: boolean;
   created_at: string;
   updated_at: string;
 }

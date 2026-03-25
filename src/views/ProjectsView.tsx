@@ -15,11 +15,11 @@ export function ProjectsView() {
 
   // Submission Form State
   const [formData, setFormData] = useState<Partial<Project>>({
-    name: '',
+    title: '',
     abstract: '',
     category: '',
     modality: '',
-    fair_id: '',
+    fairId: '',
     members: [],
     evidence: {
       files: [],
@@ -45,7 +45,7 @@ export function ProjectsView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fair_id || !formData.name || !formData.abstract) {
+    if (!formData.fairId || !formData.title || !formData.abstract) {
       toast.error('Preencha os campos obrigatórios.');
       return;
     }
@@ -56,11 +56,11 @@ export function ProjectsView() {
       toast.success('Projeto submetido com sucesso!');
       setIsSubmitting(false);
       setFormData({
-        name: '',
+        title: '',
         abstract: '',
         category: '',
         modality: '',
-        fair_id: '',
+        fairId: '',
         members: [],
         evidence: { files: [], links: [] }
       });
@@ -86,8 +86,8 @@ export function ProjectsView() {
             <div className="space-y-1 md:col-span-2">
               <label className="text-xs font-bold text-slate-500 uppercase">Selecione a Feira</label>
               <select 
-                value={formData.fair_id}
-                onChange={e => setFormData({...formData, fair_id: e.target.value})}
+                value={formData.fairId}
+                onChange={e => setFormData({...formData, fairId: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Escolha uma feira ativa...</option>
@@ -101,8 +101,8 @@ export function ProjectsView() {
               <label className="text-xs font-bold text-slate-500 uppercase">Título do Projeto</label>
               <input 
                 type="text" 
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
+                value={formData.title}
+                onChange={e => setFormData({...formData, title: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20" 
                 placeholder="Ex: Sistema de Purificação de Água com Grafeno" 
               />
@@ -171,7 +171,7 @@ export function ProjectsView() {
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-slate-900">{selectedProject.name}</h2>
+            <h2 className="text-xl lg:text-2xl font-bold text-slate-900">{selectedProject.title}</h2>
             <p className="text-xs lg:text-sm text-slate-500">ID: {selectedProject.id}</p>
           </div>
         </div>
@@ -269,7 +269,7 @@ export function ProjectsView() {
               {projects.map((project) => (
                 <tr key={project.id} className="hover:bg-primary/5 transition-colors group">
                   <td className="px-4 lg:px-6 py-4">
-                    <p className="text-sm font-bold text-slate-900">{project.name}</p>
+                    <p className="text-sm font-bold text-slate-900">{project.title}</p>
                     <p className="text-[10px] text-slate-400">ID: {project.id}</p>
                   </td>
                   <td className="px-4 lg:px-6 py-4 text-sm text-slate-600">{project.category}</td>

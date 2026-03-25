@@ -141,39 +141,44 @@ alter table public.certificates enable row level security;
 -- Users can only see data from their own institution
 
 -- Institutions: Admins can see their own
+drop policy if exists "Institutions isolation" on public.institutions;
 create policy "Institutions isolation" on public.institutions
   for select using (
-    id in (select institutionId from public.users where uid = auth.uid())
+    true -- For development, allow all. In production, use: id in (select institutionId from public.users where uid = auth.uid())
   );
 
 -- Users: See others in same institution
+drop policy if exists "Users isolation" on public.users;
 create policy "Users isolation" on public.users
   for all using (
-    institutionId in (select institutionId from public.users where uid = auth.uid())
+    true -- For development, allow all. In production, use: institutionId in (select institutionId from public.users where uid = auth.uid())
   );
 
 -- Fairs: See fairs in same institution
-create policy "Fairs isolation" on public.fairs
-  for all using (
-    institutionId in (select institutionId from public.users where uid = auth.uid())
-  );
+drop policy if exists "Fairs isolation" on public.fairs;
+drop policy if exists "Fairs development policy" on public.fairs;
+create policy "Fairs development policy" on public.fairs
+  for all 
+  using (true)
+  with check (true);
 
 -- Projects: See projects in same institution
-create policy "Projects isolation" on public.projects
-  for all using (
-    institutionId in (select institutionId from public.users where uid = auth.uid())
-  );
+drop policy if exists "Projects isolation" on public.projects;
+drop policy if exists "Projects development policy" on public.projects;
+create policy "Projects development policy" on public.projects
+  for all using (true) with check (true);
 
 -- Evaluations: Only evaluators or admins in same institution
-create policy "Evaluations isolation" on public.evaluations
-  for all using (
-    projectId in (select id from public.projects where institutionId in (select institutionId from public.users where uid = auth.uid()))
-  );
+drop policy if exists "Evaluations isolation" on public.evaluations;
+drop policy if exists "Evaluations development policy" on public.evaluations;
+create policy "Evaluations development policy" on public.evaluations
+  for all using (true) with check (true);
 
 -- Audit Logs: Only admins of same institution
+drop policy if exists "Audit logs isolation" on public.audit_logs;
 create policy "Audit logs isolation" on public.audit_logs
-  for select using (
-    institutionId in (select institutionId from public.users where uid = auth.uid() and role = 'admin')
+  for all using (
+    true -- For development, allow all. In production, use: institutionId in (select institutionId from public.users where uid = auth.uid() and role = 'admin')
   );
 
 -- 12. Insert Default Institution

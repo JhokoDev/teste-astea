@@ -61,6 +61,36 @@ export function FairsView() {
     return null;
   };
 
+  const canGoNext = () => {
+    if (currentStep === 'Identidade') {
+      return formData.name && formData.name.length > 3;
+    }
+    if (currentStep === 'Datas') {
+      const d = formData.dates;
+      return d?.registration_start && d?.registration_end && d?.evaluation_start && d?.evaluation_end && d?.results_date;
+    }
+    if (currentStep === 'Estrutura') {
+      return formData.structure?.categories && formData.structure.categories.length > 0;
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!canGoNext()) {
+      if (currentStep === 'Identidade') toast.error('Nome da feira é obrigatório (mín. 4 caracteres).');
+      else if (currentStep === 'Datas') toast.error('Todas as datas são obrigatórias.');
+      else if (currentStep === 'Estrutura') toast.error('Adicione pelo menos uma categoria.');
+      return;
+    }
+
+    const idx = steps.indexOf(currentStep);
+    if (idx < steps.length - 1) {
+      setCurrentStep(steps[idx + 1]);
+    } else {
+      handleFinish();
+    }
+  };
+
   const handleFinish = async () => {
     const dateError = validateDates();
     if (dateError) {
@@ -71,8 +101,13 @@ export function FairsView() {
 
     try {
       setLoading(true);
-      await fairsService.createFair(formData);
-      // Note: Criteria would be a separate batch insert in a real app
+      console.log('FairsView: Iniciando criação de feira:', formData);
+      const toastId = toast.loading('Criando feira no banco de dados...');
+      
+      const result = await fairsService.createFair(formData);
+      console.log('FairsView: Resultado da criação:', result);
+      
+      toast.dismiss(toastId);
       toast.success('Feira criada com sucesso!');
       setIsCreating(false);
       setFormData({
@@ -83,8 +118,16 @@ export function FairsView() {
         structure: { categories: [], modalities: [] },
         rules: { blind_evaluation: false, min_evaluators_per_project: 3, tie_breaker_hierarchy: [] }
       });
-    } catch (error) {
-      toast.error('Erro ao criar feira.');
+    } catch (error: any) {
+      console.error('FairsView: Erro detalhado ao criar feira:', error);
+      let errorMessage = 'Erro ao criar feira.';
+      try {
+        const parsedError = JSON.parse(error.message);
+        errorMessage = `Erro: ${parsedError.error || errorMessage}`;
+      } catch (e) {
+        errorMessage = error.message || errorMessage;
+      }
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -339,13 +382,11 @@ export function FairsView() {
               Anterior
             </button>
             <button 
-              onClick={() => {
-                const idx = steps.indexOf(currentStep);
-                if (idx < steps.length - 1) setCurrentStep(steps[idx + 1]);
-                else handleFinish();
-              }}
-              className="px-4 lg:px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-md"
+              onClick={handleNext}
+              disabled={loading}
+              className="px-4 lg:px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-md flex items-center gap-2 disabled:opacity-50"
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {currentStep === 'Revisão' ? 'Finalizar' : 'Próximo'}
             </button>
           </div>

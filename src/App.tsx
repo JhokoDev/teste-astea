@@ -27,12 +27,23 @@ export default function App() {
 
   useEffect(() => {
     // Check for mock dev user first
-    const mockUser = localStorage.getItem('dev_user');
-    if (mockUser) {
-      setUser(JSON.parse(mockUser));
-      setLoading(false);
-      setIsAuthReady(true);
-      return;
+    const mockUserStr = localStorage.getItem('dev_user');
+    if (mockUserStr) {
+      try {
+        const mockUser = JSON.parse(mockUserStr);
+        // If it's the old ID, clear it and let them log in again
+        if (mockUser.id === 'dev-admin-id') {
+          localStorage.removeItem('dev_user');
+          window.location.reload();
+          return;
+        }
+        setUser(mockUser);
+        setLoading(false);
+        setIsAuthReady(true);
+        return;
+      } catch (e) {
+        localStorage.removeItem('dev_user');
+      }
     }
 
     // Check initial session

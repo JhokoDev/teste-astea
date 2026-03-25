@@ -38,17 +38,28 @@ async function handleSupabaseError(error: any, operationType: OperationType, tab
 // Helper for audit logs (RF16)
 async function logAction(action: string, table: string, id: string, oldData?: any, newData?: any) {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  
+  // Support mock user
+  const mockUserStr = localStorage.getItem('dev_user');
+  const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
+  const userId = user?.id || mockUser?.id;
+  
+  if (!userId) return;
+
+  // For database foreign keys to auth.users, we must use a real UUID or null
+  // Handle both old 'dev-admin-id' and new '00000000-0000-0000-0000-000000000000'
+  const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
+  const dbUserId = isMockId ? null : userId;
 
   // Get user's institution
   const { data: profile } = await supabase
     .from('users')
     .select('institutionId')
-    .eq('uid', user.id)
-    .single();
+    .eq('uid', userId)
+    .maybeSingle();
 
   await supabase.from('audit_logs').insert({
-    userId: user.id,
+    userId: dbUserId,
     action,
     target_table: table,
     target_id: id,
@@ -81,27 +92,58 @@ export const fairsService = {
   },
 
   createFair: async (data: Partial<Fair>) => {
+    console.log('supabaseService: createFair called with:', data);
     const { data: { user } } = await supabase.auth.getUser();
     
+    // If no real user, check for mock user in localStorage
+    const mockUserStr = localStorage.getItem('dev_user');
+    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
+    const userId = user?.id || mockUser?.id;
+    
+    // For database foreign keys to auth.users, we must use a real UUID or null
+    // Handle both old 'dev-admin-id' and new '00000000-0000-0000-0000-000000000000'
+    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
+    const dbUserId = isMockId ? null : userId;
+
+    console.log('supabaseService: userId for creation:', userId, 'dbUserId:', dbUserId);
+
     // Get user's institution
-    const { data: profile } = await supabase
-      .from('users')
-      .select('institutionId')
-      .eq('uid', user?.id)
-      .single();
+    let institutionId = 'default-inst';
+    if (userId) {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('institutionId')
+        .eq('uid', userId)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.warn('Erro ao buscar perfil para instituição:', profileError);
+      } else if (profile) {
+        institutionId = profile.institutionId;
+      }
+    }
+
+    console.log('supabaseService: final institutionId:', institutionId);
 
     const { data: newFair, error } = await supabase
       .from('fairs')
       .insert({
         ...data,
-        organizerId: user?.id,
-        institutionId: profile?.institutionId || 'default-inst'
+        organizerId: dbUserId,
+        institutionId: institutionId
       })
       .select()
       .single();
 
-    if (error) handleSupabaseError(error, OperationType.CREATE, 'fairs');
-    if (newFair) await logAction('CREATE_FAIR', 'fairs', newFair.id, null, newFair);
+    if (error) {
+      console.error('supabaseService: Error inserting fair:', error);
+      await handleSupabaseError(error, OperationType.CREATE, 'fairs');
+    }
+    
+    if (newFair) {
+      console.log('supabaseService: Fair created successfully:', newFair);
+      await logAction('CREATE_FAIR', 'fairs', newFair.id, null, newFair);
+    }
     return newFair as Fair;
   },
 
@@ -115,7 +157,7 @@ export const fairsService = {
       .select()
       .single();
 
-    if (error) handleSupabaseError(error, OperationType.UPDATE, 'fairs');
+    if (error) await handleSupabaseError(error, OperationType.UPDATE, 'fairs');
     if (updatedFair) await logAction('UPDATE_FAIR', 'fairs', id, oldFair, updatedFair);
     return updatedFair as Fair;
   }
@@ -144,20 +186,28 @@ export const projectsService = {
 
   submitProject: async (data: Partial<Project>) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: profile } = await supabase.from('users').select('institutionId').eq('uid', user?.id).single();
+    
+    // Support mock user
+    const mockUserStr = localStorage.getItem('dev_user');
+    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
+    const userId = user?.id || mockUser?.id;
+    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
+    const dbUserId = isMockId ? null : userId;
+
+    const { data: profile } = await supabase.from('users').select('institutionId').eq('uid', userId).maybeSingle();
 
     const { data: newProject, error } = await supabase
       .from('projects')
       .insert({
         ...data,
-        creatorId: user?.id,
+        creatorId: dbUserId,
         institutionId: profile?.institutionId || 'default-inst',
         status: 'submetido'
       })
       .select()
       .single();
 
-    if (error) handleSupabaseError(error, OperationType.CREATE, 'projects');
+    if (error) await handleSupabaseError(error, OperationType.CREATE, 'projects');
     
     // Create first version (RF06)
     if (newProject) {
@@ -189,7 +239,7 @@ export const projectsService = {
       .select()
       .single();
 
-    if (error) handleSupabaseError(error, OperationType.UPDATE, 'projects');
+    if (error) await handleSupabaseError(error, OperationType.UPDATE, 'projects');
 
     if (updatedProject) {
       // Create new version (RF06)
@@ -210,17 +260,24 @@ export const evaluationsService = {
   submitEvaluation: async (data: Partial<Evaluation>) => {
     const { data: { user } } = await supabase.auth.getUser();
     
+    // Support mock user
+    const mockUserStr = localStorage.getItem('dev_user');
+    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
+    const userId = user?.id || mockUser?.id;
+    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
+    const dbUserId = isMockId ? null : userId;
+
     const { data: newEval, error } = await supabase
       .from('evaluations')
       .insert({
         ...data,
-        evaluatorId: user?.id,
+        evaluatorId: dbUserId,
         status: 'finalizado'
       })
       .select()
       .single();
 
-    if (error) handleSupabaseError(error, OperationType.CREATE, 'evaluations');
+    if (error) await handleSupabaseError(error, OperationType.CREATE, 'evaluations');
     if (newEval) await logAction('SUBMIT_EVALUATION', 'evaluations', newEval.id, null, newEval);
     return newEval as Evaluation;
   }

@@ -22,10 +22,10 @@ export function ProjectTable({ projects }: { projects: Project[] }) {
               className="border-b border-primary/5 hover:bg-primary/5 transition-colors group"
             >
               <td className="py-4 font-semibold text-slate-900 group-hover:text-primary transition-colors">
-                {project.name}
+                {project.title}
               </td>
               <td className="py-4 text-slate-600">
-                {project.fair_id}
+                {project.fairId}
               </td>
               <td className="py-4 font-bold text-slate-900">
                 {project.current_version}
