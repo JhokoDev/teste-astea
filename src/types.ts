@@ -152,3 +152,12 @@ export interface Alert {
   description: string;
   type: 'error' | 'warning' | 'info';
 }
+
+export interface EvaluatorApplication {
+  id: string;
+  fairId: string;
+  userId: string;
+  status: 'pendente' | 'aprovado' | 'rejeitado';
+  created_at: string;
+  institutionId: string;
+}

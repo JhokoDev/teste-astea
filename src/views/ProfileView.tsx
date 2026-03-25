@@ -14,12 +14,16 @@ const ROLE_LABELS: Record<UserRole, string> = {
   student: 'Padrão (Aluno)'
 };
 
-export function ProfileView() {
+interface ProfileViewProps {
+  onSimulateRole?: (role: UserRole | null) => void;
+  simulatedRole?: UserRole | null;
+}
+
+export function ProfileView({ onSimulateRole, simulatedRole }: ProfileViewProps) {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [displayName, setDisplayName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -29,7 +33,6 @@ export function ProfileView() {
         setUser(mock);
         setProfile(mock);
         setDisplayName(mock.displayName || '');
-        setSelectedRole(mock.role || 'student');
         return;
       }
 
@@ -45,7 +48,6 @@ export function ProfileView() {
         if (profile) {
           setProfile(profile);
           setDisplayName(profile.displayName || '');
-          setSelectedRole(profile.role || 'student');
         }
       }
     };
@@ -57,11 +59,10 @@ export function ProfileView() {
       setLoading(true);
       if (localStorage.getItem('dev_user')) {
         const mock = JSON.parse(localStorage.getItem('dev_user')!);
-        const updated = { ...mock, displayName, role: selectedRole };
+        const updated = { ...mock, displayName };
         localStorage.setItem('dev_user', JSON.stringify(updated));
         setProfile(updated);
-        toast.success('Perfil atualizado com sucesso! Recarregue para aplicar mudanças de permissão.');
-        setTimeout(() => window.location.reload(), 1500);
+        toast.success('Perfil atualizado com sucesso!');
         return;
       }
 
@@ -162,13 +163,17 @@ export function ProfileView() {
                   />
                 </div>
                 
-                {localStorage.getItem('dev_user') && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Nível de Acesso (Mock Only)</label>
+                {profile.role === 'admin' && (
+                  <div className="space-y-1 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                    <label className="text-xs font-bold text-amber-600 uppercase flex items-center gap-2">
+                      <Shield className="w-3 h-3" />
+                      Simular Nível de Acesso (Admin Only)
+                    </label>
+                    <p className="text-[10px] text-amber-500 mb-2">Use para testar a visualização de outros cargos sem perder seu acesso real de administrador.</p>
                     <select 
-                      value={selectedRole}
-                      onChange={e => setSelectedRole(e.target.value as UserRole)}
-                      className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20"
+                      value={simulatedRole || 'admin'}
+                      onChange={e => onSimulateRole?.(e.target.value as UserRole)}
+                      className="w-full bg-white border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-500/20 text-sm font-medium"
                     >
                       {Object.entries(ROLE_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>{label}</option>

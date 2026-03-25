@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabase';
 import { Toaster } from 'sonner';
 import { cn } from './lib/utils';
+import { UserRole } from './types';
 
 export default function App() {
   const [authUser, setAuthUser] = useState<any>(null);
@@ -27,6 +28,23 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('painel');
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [simulatedRole, setSimulatedRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    const savedSimulatedRole = localStorage.getItem('simulated_role') as UserRole;
+    if (savedSimulatedRole) {
+      setSimulatedRole(savedSimulatedRole);
+    }
+  }, []);
+
+  const handleSimulateRole = (role: UserRole | null) => {
+    if (role) {
+      localStorage.setItem('simulated_role', role);
+    } else {
+      localStorage.removeItem('simulated_role');
+    }
+    setSimulatedRole(role);
+  };
 
   useEffect(() => {
     // Check for mock dev user first
@@ -111,16 +129,18 @@ export default function App() {
     );
   }
 
+  const effectiveRole = (profile?.role === 'admin' && simulatedRole) ? simulatedRole : profile?.role;
+
   const renderView = () => {
     switch (activeTab) {
-      case 'painel': return <DashboardView userRole={profile?.role} userId={profile?.uid} />;
+      case 'painel': return <DashboardView userRole={effectiveRole} userId={profile?.uid} />;
       case 'feiras': return <FairsView profile={profile} />;
       case 'explorar': return <ExploreFairsView profile={profile} />;
       case 'projetos': return <ProjectsView profile={profile} />;
       case 'avaliadores': return <EvaluatorsView profile={profile} />;
       case 'configuracoes': return <SettingsView />;
-      case 'perfil': return <ProfileView />;
-      default: return <DashboardView userRole={profile?.role} userId={profile?.uid} />;
+      case 'perfil': return <ProfileView onSimulateRole={handleSimulateRole} simulatedRole={simulatedRole} />;
+      default: return <DashboardView userRole={effectiveRole} userId={profile?.uid} />;
     }
   };
 
@@ -153,7 +173,7 @@ export default function App() {
               activeTab={activeTab} 
               onTabChange={setActiveTab}
               onClose={() => setIsMobileSidebarOpen(false)}
-              userRole={profile?.role}
+              userRole={effectiveRole}
             />
           </div>
           

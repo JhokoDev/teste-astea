@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Calendar, Users, ChevronRight, Loader2, Info, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Calendar, Users, ChevronRight, Loader2, Info, ExternalLink, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
 import { Fair, User } from '../types';
 import { toast } from 'sonner';
+import { supabase } from '../supabase';
 
 interface ExploreFairsViewProps {
   profile?: User | null;
@@ -15,6 +16,8 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFair, setSelectedFair] = useState<Fair | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
 
   useEffect(() => {
     const unsubscribe = fairsService.subscribeToFairs((data) => {
@@ -26,6 +29,38 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const checkApplication = async () => {
+      if (!selectedFair || !profile) return;
+      
+      const { data } = await supabase
+        .from('evaluator_applications')
+        .select('id')
+        .eq('fairId', selectedFair.id)
+        .eq('userId', profile.uid)
+        .maybeSingle();
+      
+      setHasApplied(!!data);
+    };
+    
+    checkApplication();
+  }, [selectedFair, profile]);
+
+  const handleApplyEvaluator = async () => {
+    if (!selectedFair) return;
+    
+    try {
+      setApplying(true);
+      await fairsService.applyAsEvaluator(selectedFair.id);
+      toast.success('Candidatura enviada com sucesso! Aguarde a revisão do organizador.');
+    } catch (error: any) {
+      console.error('Erro ao candidatar-se:', error);
+      toast.error('Erro ao enviar candidatura. Você pode já ter se candidatado.');
+    } finally {
+      setApplying(false);
+    }
+  };
 
   const filteredFairs = fairs.filter(f => 
     f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -98,6 +133,26 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
                 Submeter Projeto
                 <ExternalLink className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold">Avaliador</h3>
+              <p className="text-xs text-slate-500">
+                Tem experiência na área? Candidate-se para ser um avaliador nesta feira.
+              </p>
+              <button 
+                disabled={applying || hasApplied || profile?.role === 'evaluator' || profile?.role === 'admin' || profile?.role === 'manager'}
+                className={cn(
+                  "w-full py-3 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50",
+                  hasApplied ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-white border border-primary text-primary hover:bg-primary/5"
+                )}
+                onClick={handleApplyEvaluator}
+              >
+                {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : (hasApplied ? <ShieldCheck className="w-4 h-4" /> : <Users className="w-4 h-4" />)}
+                {hasApplied ? 'Candidatura Enviada' : 'Candidatar-se'}
+              </button>
+              {profile?.role === 'evaluator' && <p className="text-[10px] text-emerald-600 text-center font-bold">Você já é um avaliador.</p>}
+              {(profile?.role === 'admin' || profile?.role === 'manager') && <p className="text-[10px] text-slate-400 text-center font-bold">Organizadores não podem se candidatar.</p>}
             </div>
 
             <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">

@@ -160,6 +160,32 @@ export const fairsService = {
     if (error) await handleSupabaseError(error, OperationType.UPDATE, 'fairs');
     if (updatedFair) await logAction('UPDATE_FAIR', 'fairs', id, oldFair, updatedFair);
     return updatedFair as Fair;
+  },
+
+  applyAsEvaluator: async (fairId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const mockUserStr = localStorage.getItem('dev_user');
+    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
+    const userId = user?.id || mockUser?.id;
+    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
+    const dbUserId = isMockId ? null : userId;
+
+    const { data: profile } = await supabase.from('users').select('institutionId').eq('uid', userId).maybeSingle();
+
+    const { data: application, error } = await supabase
+      .from('evaluator_applications')
+      .insert({
+        fairId,
+        userId: dbUserId,
+        institutionId: profile?.institutionId || 'default-inst',
+        status: 'pendente'
+      })
+      .select()
+      .single();
+
+    if (error) await handleSupabaseError(error, OperationType.CREATE, 'evaluator_applications');
+    if (application) await logAction('APPLY_AS_EVALUATOR', 'evaluator_applications', application.id, null, application);
+    return application;
   }
 };
 
