@@ -146,27 +146,29 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
     return (
       <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-6 lg:space-y-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => setSelectedProject(null)} className="text-slate-400 hover:text-primary transition-colors">
+          <button onClick={() => setSelectedProject(null)} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
             <ShieldAlert className="w-6 h-6 rotate-180" />
           </button>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Avaliar: {selectedProject.title}</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Avaliar: {selectedProject.title}</h2>
         </div>
 
-        <div className="bg-white elevation-1 rounded-2xl p-6 lg:p-8 space-y-8">
+        <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 lg:p-8 space-y-8">
           {/* Conflict Declaration (RF09) */}
-          <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-between">
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-xl flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <ShieldAlert className="w-5 h-5 text-amber-600" />
+              <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               <div>
-                <p className="text-sm font-bold text-amber-900">Declaração de Conflito (RF09)</p>
-                <p className="text-xs text-amber-700">Você possui algum vínculo com este projeto ou seus autores?</p>
+                <p className="text-sm font-bold text-amber-900 dark:text-amber-400">Declaração de Conflito (RF09)</p>
+                <p className="text-xs text-amber-700 dark:text-amber-500">Você possui algum vínculo com este projeto ou seus autores?</p>
               </div>
             </div>
             <button 
               onClick={() => setEvaluationData({...evaluationData, is_conflict_declared: !evaluationData.is_conflict_declared})}
               className={cn(
                 "px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                evaluationData.is_conflict_declared ? "bg-amber-600 text-white" : "bg-white text-amber-600 border border-amber-200"
+                evaluationData.is_conflict_declared 
+                  ? "bg-amber-600 text-white" 
+                  : "bg-white dark:bg-app-surface text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30"
               )}
             >
               {evaluationData.is_conflict_declared ? 'Conflito Declarado' : 'Declarar Conflito'}
@@ -185,20 +187,20 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                   {['Inovação', 'Metodologia', 'Apresentação', 'Viabilidade'].map(criterion => (
                     <div key={criterion} className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <label className="text-sm font-bold text-slate-700">{criterion}</label>
-                        <span className="text-sm font-bold text-primary">{(evaluationData.scores as any)[criterion] || 0}/10</span>
+                        <label className="text-sm font-bold text-slate-700 dark:text-app-fg">{criterion}</label>
+                        <span className="text-sm font-bold text-primary">{evaluationData.scores?.[criterion] || 0}/10</span>
                       </div>
                       <input 
                         type="range" 
                         min="0" 
                         max="10" 
                         step="0.5"
-                        value={(evaluationData.scores as any)[criterion] || 0}
+                        value={evaluationData.scores?.[criterion] || 0}
                         onChange={e => setEvaluationData({
                           ...evaluationData, 
                           scores: { ...evaluationData.scores, [criterion]: parseFloat(e.target.value) }
                         })}
-                        className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-primary"
+                        className="w-full h-2 bg-slate-100 dark:bg-app-surface rounded-lg appearance-none cursor-pointer accent-primary"
                       />
                     </div>
                   ))}
@@ -207,14 +209,14 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
               {/* Feedback (RF12) */}
               <div className="space-y-4">
-                <h3 className="text-lg font-bold flex items-center gap-2">
+                <h3 className="text-lg font-bold flex items-center gap-2 dark:text-app-fg">
                   <MessageSquare className="w-5 h-5 text-primary" />
                   Feedback Construtivo (RF12)
                 </h3>
                 <textarea 
                   value={evaluationData.feedback}
                   onChange={e => setEvaluationData({...evaluationData, feedback: e.target.value})}
-                  className="w-full bg-slate-50 border-none rounded-xl p-4 outline-none focus:ring-2 focus:ring-primary/20 h-32" 
+                  className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-4 outline-none focus:ring-2 focus:ring-primary/20 h-32 dark:text-app-fg" 
                   placeholder="Escreva sugestões e observações para os autores..." 
                 />
               </div>
@@ -224,7 +226,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
           <div className="pt-6 flex justify-end gap-4">
             <button 
               onClick={() => setSelectedProject(null)}
-              className="px-6 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
+              className="px-6 py-2 rounded-xl border border-slate-200 dark:border-app-border text-slate-600 dark:text-app-muted font-bold text-sm hover:bg-slate-50 dark:hover:bg-app-surface"
             >
               Cancelar
             </button>
@@ -245,13 +247,13 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
   // Management View for Managers/Admins
   if (userRole === 'admin' || userRole === 'manager') {
     return (
-      <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+      <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Gestão de Usuários e Avaliadores</h2>
-            <p className="text-xs lg:text-sm text-slate-500">Promova usuários a avaliadores ou gerencie permissões.</p>
+            <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Gestão de Usuários e Avaliadores</h2>
+            <p className="text-xs lg:text-sm text-slate-500 dark:text-app-muted">Promova usuários a avaliadores ou gerencie permissões.</p>
           </div>
-          <button className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 shadow-md flex items-center justify-center gap-2">
+          <button className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 shadow-md flex items-center justify-center gap-2 transition-all active:scale-95">
             <UserPlus className="w-4 h-4" />
             Convidar Avaliador
           </button>
@@ -259,49 +261,49 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white elevation-1 rounded-2xl p-4 flex items-center gap-3">
-              <UserSearch className="w-5 h-5 text-slate-400" />
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 flex items-center gap-3">
+              <UserSearch className="w-5 h-5 text-slate-400 dark:text-app-muted" />
               <input 
                 type="text" 
                 placeholder="Buscar por nome ou e-mail..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-sm"
+                className="flex-1 bg-transparent border-none outline-none text-sm dark:text-app-fg"
               />
             </div>
 
-            <div className="bg-white elevation-1 rounded-2xl overflow-hidden">
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100">
-                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Usuário</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Cargo Atual</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Ações</th>
+                    <tr className="bg-slate-50 dark:bg-app-surface border-b border-slate-100 dark:border-app-border">
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Usuário</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Cargo Atual</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-app-muted uppercase text-right">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-app-border">
                     {filteredUsers.map(user => (
-                      <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={user.uid} className="hover:bg-slate-50/50 dark:hover:bg-primary/10 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
                               {user.displayName?.charAt(0) || user.email?.charAt(0)}
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-slate-900">{user.displayName}</p>
-                              <p className="text-xs text-slate-500">{user.email}</p>
+                              <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{user.displayName}</p>
+                              <p className="text-xs text-slate-500 dark:text-app-muted">{user.email}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <span className={cn(
                             "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
-                            user.role === 'admin' && "bg-purple-100 text-purple-700",
-                            user.role === 'manager' && "bg-blue-100 text-blue-700",
-                            user.role === 'evaluator' && "bg-emerald-100 text-emerald-700",
-                            user.role === 'advisor' && "bg-amber-100 text-amber-700",
-                            user.role === 'student' && "bg-slate-100 text-slate-700"
+                            user.role === 'admin' && "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
+                            user.role === 'manager' && "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
+                            user.role === 'evaluator' && "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400",
+                            user.role === 'advisor' && "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",
+                            user.role === 'student' && "bg-slate-100 dark:bg-app-surface text-slate-700 dark:text-app-muted"
                           )}>
                             {ROLE_LABELS[user.role as UserRole] || user.role}
                           </span>
@@ -311,7 +313,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                             {user.role !== 'evaluator' ? (
                               <button 
                                 onClick={() => handleUpdateRole(user.uid, 'evaluator')}
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
                                 title="Promover a Avaliador"
                               >
                                 <ShieldCheck className="w-4 h-4" />
@@ -319,13 +321,13 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                             ) : (
                               <button 
                                 onClick={() => handleUpdateRole(user.uid, 'student')}
-                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
                                 title="Rebaixar a Aluno"
                               >
                                 <ShieldAlert className="w-4 h-4" />
                               </button>
                             )}
-                            <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors">
+                            <button className="p-2 text-slate-400 dark:text-app-muted hover:bg-slate-100 dark:hover:bg-app-surface rounded-lg transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -339,29 +341,29 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold flex items-center gap-2">
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold flex items-center gap-2 dark:text-app-fg">
                 <Shield className="w-5 h-5 text-primary" />
                 Resumo da Banca
               </h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                  <span className="text-sm text-slate-600">Total de Avaliadores</span>
+                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-app-surface rounded-xl">
+                  <span className="text-sm text-slate-600 dark:text-app-muted">Total de Avaliadores</span>
                   <span className="text-lg font-bold text-primary">{evaluators.length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                  <span className="text-sm text-slate-600">Aguardando Convite</span>
-                  <span className="text-lg font-bold text-slate-400">0</span>
+                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-app-surface rounded-xl">
+                  <span className="text-sm text-slate-600 dark:text-app-muted">Aguardando Convite</span>
+                  <span className="text-lg font-bold text-slate-400 dark:text-app-muted/50">0</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 space-y-3">
+            <div className="bg-primary/5 dark:bg-primary/10 border border-primary/10 dark:border-primary/20 rounded-2xl p-6 space-y-3">
               <div className="flex items-center gap-2 text-primary">
                 <CheckCircle2 className="w-5 h-5" />
                 <h4 className="font-bold text-sm">Dica de Gestão</h4>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-app-muted leading-relaxed">
                 Você pode promover qualquer usuário cadastrado para o cargo de avaliador clicando no ícone de escudo verde.
               </p>
             </div>
@@ -373,18 +375,20 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
   // Default View for Evaluators
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Minhas Avaliações</h2>
-          <p className="text-xs lg:text-sm text-slate-500">Projetos atribuídos para sua análise.</p>
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Minhas Avaliações</h2>
+          <p className="text-xs lg:text-sm text-slate-500 dark:text-app-muted">Projetos atribuídos para sua análise.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button 
             onClick={() => setIsBlindMode(!isBlindMode)}
             className={cn(
               "px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all",
-              isBlindMode ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-slate-100 text-slate-600 border border-slate-200"
+              isBlindMode 
+                ? "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30" 
+                : "bg-slate-100 dark:bg-app-surface text-slate-600 dark:text-app-muted border border-slate-200 dark:border-app-border"
             )}
           >
             {isBlindMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -396,48 +400,48 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-4">
           {assignedProjects.map(project => (
-            <div key={project.id} className="bg-white elevation-1 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div key={project.id} className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-colors">
               <div>
-                <h3 className="font-bold text-slate-900">{project.title}</h3>
-                <p className="text-xs text-slate-400 uppercase font-bold">{project.category}</p>
+                <h3 className="font-bold text-slate-900 dark:text-app-fg">{project.title}</h3>
+                <p className="text-xs text-slate-400 dark:text-app-muted uppercase font-bold">{project.category}</p>
               </div>
               <button 
                 onClick={() => setSelectedProject(project)}
-                className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary/90 shadow-sm"
+                className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary/90 shadow-sm transition-all active:scale-95"
               >
                 Avaliar Agora
               </button>
             </div>
           ))}
           {assignedProjects.length === 0 && (
-            <div className="py-20 text-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+            <div className="py-20 text-center text-slate-400 dark:text-app-muted border-2 border-dashed border-slate-100 dark:border-app-border rounded-2xl">
               Nenhum projeto atribuído no momento.
             </div>
           )}
         </div>
 
         <div className="space-y-4 lg:space-y-6">
-          <div className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
-            <h3 className="text-lg font-bold">Resumo do Progresso</h3>
+          <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
+            <h3 className="text-lg font-bold dark:text-app-fg">Resumo do Progresso</h3>
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold">
-                  <span>Concluído</span>
+                  <span className="dark:text-app-muted">Concluído</span>
                   <span className="text-primary">0/3</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-100 dark:bg-app-surface rounded-full overflow-hidden">
                   <div className="h-full bg-primary" style={{ width: '0%' }} />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 lg:p-6 space-y-3">
-            <div className="flex items-center gap-2 text-amber-700">
+          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl p-4 lg:p-6 space-y-3">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
               <AlertCircle className="w-5 h-5" />
               <h4 className="font-bold text-sm">Integridade (RF09)</h4>
             </div>
-            <p className="text-xs text-amber-600 leading-relaxed">
+            <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed">
               Lembre-se de declarar conflitos de interesse antes de iniciar qualquer avaliação.
             </p>
           </div>

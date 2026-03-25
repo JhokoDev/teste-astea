@@ -17,9 +17,11 @@ const ROLE_LABELS: Record<UserRole, string> = {
 interface ProfileViewProps {
   onSimulateRole?: (role: UserRole | null) => void;
   simulatedRole?: UserRole | null;
+  theme?: 'light' | 'dark';
+  onThemeChange?: (theme: 'light' | 'dark') => void;
 }
 
-export function ProfileView({ onSimulateRole, simulatedRole }: ProfileViewProps) {
+export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', onThemeChange }: ProfileViewProps) {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -253,8 +255,24 @@ export function ProfileView({ onSimulateRole, simulatedRole }: ProfileViewProps)
                   <p className="text-xs text-slate-500">Escolha entre o modo claro ou escuro.</p>
                 </div>
                 <div className="flex bg-white p-1 rounded-lg border border-slate-200">
-                  <button className="px-3 py-1 bg-primary text-white rounded-md text-[10px] font-bold">Claro</button>
-                  <button className="px-3 py-1 text-slate-400 rounded-md text-[10px] font-bold">Escuro</button>
+                  <button 
+                    onClick={() => onThemeChange?.('light')}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-[10px] font-bold transition-all",
+                      theme === 'light' ? "bg-primary text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    Claro
+                  </button>
+                  <button 
+                    onClick={() => onThemeChange?.('dark')}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-[10px] font-bold transition-all",
+                      theme === 'dark' ? "bg-primary text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    Escuro
+                  </button>
                 </div>
               </div>
             </div>

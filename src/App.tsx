@@ -29,6 +29,21 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [simulatedRole, setSimulatedRole] = useState<UserRole | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    }
+  }, []);
+
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
 
   useEffect(() => {
     const savedSimulatedRole = localStorage.getItem('simulated_role') as UserRole;
@@ -139,13 +154,13 @@ export default function App() {
       case 'projetos': return <ProjectsView profile={profile} />;
       case 'avaliadores': return <EvaluatorsView profile={profile} />;
       case 'configuracoes': return <SettingsView />;
-      case 'perfil': return <ProfileView onSimulateRole={handleSimulateRole} simulatedRole={simulatedRole} />;
+      case 'perfil': return <ProfileView onSimulateRole={handleSimulateRole} simulatedRole={simulatedRole} theme={theme} onThemeChange={handleThemeChange} />;
       default: return <DashboardView userRole={effectiveRole} userId={profile?.uid} />;
     }
   };
 
   return (
-    <div className={cn("min-h-screen bg-[#FBFDF9]", authUser && "flex")}>
+    <div className={cn("min-h-screen bg-[#FBFDF9] dark:bg-app-bg text-app-fg transition-colors duration-300", authUser && "flex")}>
       <Toaster position="top-right" richColors />
       
       {!authUser ? (

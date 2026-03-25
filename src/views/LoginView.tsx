@@ -156,30 +156,30 @@ export function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#FBFDF9] p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#FBFDF9] dark:bg-[#0A120F] p-4 transition-colors duration-300">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full mx-auto bg-white elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100"
+        className="max-w-md w-full mx-auto bg-white dark:bg-[#121F1A] elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100 dark:border-slate-800"
       >
         <div className="text-center space-y-2">
           <div className="inline-flex bg-primary rounded-2xl p-3 sm:p-4 mb-2 sm:mb-4 shadow-sm">
             <Beaker className="text-white w-6 h-6 sm:w-8 sm:h-8" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Astea Scientific</h1>
-          <p className="text-slate-500 text-xs sm:text-sm">Gestão Inteligente de Feiras Científicas</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Astea Scientific</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">Gestão Inteligente de Feiras Científicas</p>
         </div>
 
-        <div className="flex p-1 bg-slate-50 rounded-xl">
+        <div className="flex p-1 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
           <button 
             onClick={() => setMode('login')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === 'login' ? 'bg-white shadow-sm text-primary' : 'text-slate-400'}`}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === 'login' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-400 dark:text-slate-500'}`}
           >
             Entrar
           </button>
           <button 
             onClick={() => setMode('register')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === 'register' ? 'bg-white shadow-sm text-primary' : 'text-slate-400'}`}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === 'register' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-400 dark:text-slate-500'}`}
           >
             Cadastrar
           </button>
@@ -194,14 +194,14 @@ export function LoginView() {
                 exit={{ opacity: 0, height: 0 }}
                 className="space-y-1"
               >
-                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Nome Completo</label>
+                <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase ml-1">Nome Completo</label>
                 <div className="relative">
-                  <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                  <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
                   <input 
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all"
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all dark:text-white"
                     placeholder="Seu nome"
                   />
                 </div>
@@ -210,28 +210,28 @@ export function LoginView() {
           </AnimatePresence>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-400 uppercase ml-1">E-mail</label>
+            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase ml-1">E-mail</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
               <input 
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all dark:text-white"
                 placeholder="exemplo@gmail.com"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-400 uppercase ml-1">Senha</label>
+            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase ml-1">Senha</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
               <input 
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all dark:text-white"
                 placeholder="••••••••"
               />
             </div>
@@ -253,46 +253,46 @@ export function LoginView() {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-100"></div>
+            <div className="w-full border-t border-slate-100 dark:border-slate-800"></div>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-slate-400 font-bold">Ou</span>
+            <span className="bg-white dark:bg-[#121F1A] px-4 text-slate-400 dark:text-slate-500 font-bold">Ou</span>
           </div>
         </div>
 
         <button 
           onClick={handleGoogleLogin}
           disabled={isLoggingIn}
-          className="w-full flex items-center justify-center gap-3 bg-white border border-slate-100 text-slate-600 py-4 rounded-xl font-bold hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-70"
+          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#121F1A] border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 py-4 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all active:scale-95 disabled:opacity-70"
         >
           <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
           Entrar com Google
         </button>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl">
+          <div className="flex items-center gap-2 p-3 bg-primary/5 dark:bg-primary/10 rounded-xl">
             <ShieldCheck className="text-primary w-4 h-4" />
-            <p className="text-[10px] font-bold text-slate-600 uppercase">Seguro</p>
+            <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Seguro</p>
           </div>
-          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl">
+          <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl">
             <Globe className="text-blue-600 w-4 h-4" />
-            <p className="text-[10px] font-bold text-slate-600 uppercase">Global</p>
+            <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Global</p>
           </div>
         </div>
 
-        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 space-y-2">
-          <p className="text-[11px] text-amber-700 leading-relaxed">
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20 space-y-2">
+          <p className="text-[11px] text-amber-700 dark:text-amber-500 leading-relaxed">
             <span className="font-bold">Dica:</span> Se você ainda não criou uma conta neste novo sistema (Supabase), use a aba <span className="font-bold italic">Cadastrar</span> acima.
           </p>
-          <div className="pt-2 border-t border-amber-200/50 space-y-1">
-            <p className="text-[10px] text-amber-600/80 italic">
-              <span className="font-bold">Admin:</span> <span className="font-mono bg-amber-100/50 px-1 rounded">admin@ifmaker.com</span> / <span className="font-mono bg-amber-100/50 px-1 rounded">iLy831104</span>
+          <div className="pt-2 border-t border-amber-200/50 dark:border-amber-900/30 space-y-1">
+            <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 italic">
+              <span className="font-bold">Admin:</span> <span className="font-mono bg-amber-100/50 dark:bg-amber-900/20 px-1 rounded">admin@ifmaker.com</span> / <span className="font-mono bg-amber-100/50 dark:bg-amber-900/20 px-1 rounded">iLy831104</span>
             </p>
-            <p className="text-[10px] text-amber-600/80 italic">
-              <span className="font-bold">Aluno:</span> <span className="font-mono bg-amber-100/50 px-1 rounded">user@gmail.com</span> / <span className="font-mono bg-amber-100/50 px-1 rounded">mudar123</span>
+            <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 italic">
+              <span className="font-bold">Aluno:</span> <span className="font-mono bg-amber-100/50 dark:bg-amber-900/20 px-1 rounded">user@gmail.com</span> / <span className="font-mono bg-amber-100/50 dark:bg-amber-900/20 px-1 rounded">mudar123</span>
             </p>
-            <p className="text-[10px] text-amber-600/80 italic">
-              <span className="font-bold">Gerenciador:</span> <span className="font-mono bg-amber-100/50 px-1 rounded">gerenciador@gmail.com</span> / <span className="font-mono bg-amber-100/50 px-1 rounded">mudar123</span>
+            <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 italic">
+              <span className="font-bold">Gerenciador:</span> <span className="font-mono bg-amber-100/50 dark:bg-amber-900/20 px-1 rounded">gerenciador@gmail.com</span> / <span className="font-mono bg-amber-100/50 dark:bg-amber-900/20 px-1 rounded">mudar123</span>
             </p>
           </div>
         </div>

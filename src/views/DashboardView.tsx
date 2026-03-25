@@ -167,10 +167,10 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
   };
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 overflow-y-auto">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 overflow-y-auto bg-background-light dark:bg-app-bg transition-colors duration-300 min-h-full">
       <div className="flex flex-col gap-1">
-        <h2 className="text-2xl font-bold text-slate-900">{getWelcomeMessage()}</h2>
-        <p className="text-slate-500 text-sm">Acompanhe o progresso e as métricas em tempo real.</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-app-fg">{getWelcomeMessage()}</h2>
+        <p className="text-slate-500 dark:text-app-muted text-sm">Acompanhe o progresso e as métricas em tempo real.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -193,16 +193,16 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white elevation-1 rounded-xl p-6"
+            className="bg-white dark:bg-app-card elevation-1 rounded-xl p-6"
           >
             <ProjectTable projects={filteredProjects} />
             {filteredProjects.length === 0 && !loading && (
-              <div className="py-12 text-center text-slate-400">
+              <div className="py-12 text-center text-slate-400 dark:text-app-muted">
                 Nenhum projeto encontrado no banco de dados.
               </div>
             )}
             {loading && (
-              <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
+              <div className="py-12 text-center text-slate-400 dark:text-app-muted flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Carregando dados...
               </div>
@@ -218,7 +218,7 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
         >
           <AlertsPanel alerts={alerts} />
           {alerts.length === 0 && !loading && (
-            <div className="bg-white elevation-1 rounded-xl p-6 text-center text-slate-400 text-sm">
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-xl p-6 text-center text-slate-400 dark:text-app-muted text-sm">
               Tudo em ordem! Não há alertas pendentes.
             </div>
           )}

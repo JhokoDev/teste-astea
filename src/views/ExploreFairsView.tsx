@@ -69,47 +69,47 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
 
   if (selectedFair) {
     return (
-      <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-8">
+      <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
         <div className="flex items-center gap-4">
-          <button onClick={() => setSelectedFair(null)} className="text-slate-400 hover:text-primary transition-colors">
+          <button onClick={() => setSelectedFair(null)} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-900">{selectedFair.name}</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">{selectedFair.name}</h2>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-primary">
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-primary dark:text-primary-light">
                 <Info className="w-5 h-5" />
                 Sobre a Feira
               </h3>
-              <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
+              <p className="text-slate-600 dark:text-app-muted leading-relaxed whitespace-pre-wrap">
                 {selectedFair.description || "Esta feira ainda não possui uma descrição detalhada."}
               </p>
             </div>
 
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-primary">
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-primary dark:text-primary-light">
                 <Calendar className="w-5 h-5" />
                 Cronograma
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Inscrições</p>
-                  <p className="text-sm font-bold">
+                <div className="p-4 bg-slate-50 dark:bg-app-surface rounded-xl">
+                  <p className="text-[10px] text-slate-400 dark:text-app-muted/60 uppercase font-bold mb-1">Inscrições</p>
+                  <p className="text-sm font-bold dark:text-app-fg">
                     {selectedFair.dates?.registration_start ? new Date(selectedFair.dates.registration_start).toLocaleDateString() : '-'} até {selectedFair.dates?.registration_end ? new Date(selectedFair.dates.registration_end).toLocaleDateString() : '-'}
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Avaliação</p>
-                  <p className="text-sm font-bold">
+                <div className="p-4 bg-slate-50 dark:bg-app-surface rounded-xl">
+                  <p className="text-[10px] text-slate-400 dark:text-app-muted/60 uppercase font-bold mb-1">Avaliação</p>
+                  <p className="text-sm font-bold dark:text-app-fg">
                     {selectedFair.dates?.evaluation_start ? new Date(selectedFair.dates.evaluation_start).toLocaleDateString() : '-'} até {selectedFair.dates?.evaluation_end ? new Date(selectedFair.dates.evaluation_end).toLocaleDateString() : '-'}
                   </p>
                 </div>
-                <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl sm:col-span-2">
-                  <p className="text-[10px] text-primary uppercase font-bold mb-1">Resultado Final</p>
-                  <p className="text-sm font-bold text-primary">
+                <div className="p-4 bg-primary/5 dark:bg-primary/10 border border-primary/10 dark:border-primary/20 rounded-xl sm:col-span-2">
+                  <p className="text-[10px] text-primary dark:text-primary-light uppercase font-bold mb-1">Resultado Final</p>
+                  <p className="text-sm font-bold text-primary dark:text-primary-light">
                     {selectedFair.dates?.results_date ? new Date(selectedFair.dates.results_date).toLocaleDateString() : 'A definir'}
                   </p>
                 </div>
@@ -118,15 +118,14 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold">Participar</h3>
-              <p className="text-xs text-slate-500">
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold dark:text-app-fg">Participar</h3>
+              <p className="text-xs text-slate-500 dark:text-app-muted">
                 Interessado nesta feira? Você pode submeter seu projeto diretamente se as inscrições estiverem abertas.
               </p>
               <button 
                 className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
                 onClick={() => {
-                  // In a real app, this would redirect to the Projects tab with the fair selected
                   toast.info("Vá para a aba 'Projetos' para iniciar sua submissão nesta feira.");
                 }}
               >
@@ -135,31 +134,31 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
               </button>
             </div>
 
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold">Avaliador</h3>
-              <p className="text-xs text-slate-500">
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold dark:text-app-fg">Avaliador</h3>
+              <p className="text-xs text-slate-500 dark:text-app-muted">
                 Tem experiência na área? Candidate-se para ser um avaliador nesta feira.
               </p>
               <button 
                 disabled={applying || hasApplied || profile?.role === 'evaluator' || profile?.role === 'admin' || profile?.role === 'manager'}
                 className={cn(
                   "w-full py-3 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50",
-                  hasApplied ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-white border border-primary text-primary hover:bg-primary/5"
+                  hasApplied ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40" : "bg-white dark:bg-app-surface border border-primary text-primary dark:text-primary-light hover:bg-primary/5 dark:hover:bg-primary/10"
                 )}
                 onClick={handleApplyEvaluator}
               >
                 {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : (hasApplied ? <ShieldCheck className="w-4 h-4" /> : <Users className="w-4 h-4" />)}
                 {hasApplied ? 'Candidatura Enviada' : 'Candidatar-se'}
               </button>
-              {profile?.role === 'evaluator' && <p className="text-[10px] text-emerald-600 text-center font-bold">Você já é um avaliador.</p>}
-              {(profile?.role === 'admin' || profile?.role === 'manager') && <p className="text-[10px] text-slate-400 text-center font-bold">Organizadores não podem se candidatar.</p>}
+              {profile?.role === 'evaluator' && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 text-center font-bold">Você já é um avaliador.</p>}
+              {(profile?.role === 'admin' || profile?.role === 'manager') && <p className="text-[10px] text-slate-400 dark:text-app-muted text-center font-bold">Organizadores não podem se candidatar.</p>}
             </div>
 
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-bold">Categorias</h3>
+            <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
+              <h3 className="text-lg font-bold dark:text-app-fg">Categorias</h3>
               <div className="flex flex-wrap gap-2">
                 {selectedFair.structure?.categories.map(cat => (
-                  <span key={cat} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold uppercase">
+                  <span key={cat} className="px-3 py-1 bg-slate-100 dark:bg-app-surface text-slate-600 dark:text-app-muted rounded-full text-[10px] font-bold uppercase">
                     {cat}
                   </span>
                 ))}
@@ -172,23 +171,23 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
   }
 
   return (
-    <div className="p-4 lg:p-8 space-y-8">
+    <div className="p-4 lg:p-8 space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
       <div className="max-w-4xl mx-auto text-center space-y-4">
-        <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
-          Descubra sua próxima <span className="text-primary italic">oportunidade</span>
+        <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-app-fg tracking-tight">
+          Descubra sua próxima <span className="text-primary dark:text-primary-light italic">oportunidade</span>
         </h2>
-        <p className="text-slate-500 max-w-2xl mx-auto">
+        <p className="text-slate-500 dark:text-app-muted max-w-2xl mx-auto">
           Explore todas as feiras científicas publicadas na plataforma. Encontre o desafio perfeito para o seu projeto e conecte-se com a comunidade.
         </p>
         
         <div className="relative max-w-xl mx-auto mt-8">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-app-muted w-5 h-5" />
           <input 
             type="text"
             placeholder="Buscar por nome, tema ou descrição..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-white elevation-1 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            className="w-full pl-12 pr-4 py-4 bg-white dark:bg-app-card dark:text-app-fg elevation-1 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
       </div>
@@ -205,31 +204,31 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
               key={fair.id}
               whileHover={{ y: -5 }}
               onClick={() => setSelectedFair(fair)}
-              className="bg-white elevation-1 rounded-3xl overflow-hidden cursor-pointer group border border-transparent hover:border-primary/10 transition-all"
+              className="bg-white dark:bg-app-card elevation-1 rounded-3xl overflow-hidden cursor-pointer group border border-transparent hover:border-primary/10 transition-all"
             >
-              <div className="h-32 bg-primary/5 flex items-center justify-center relative overflow-hidden">
+              <div className="h-32 bg-primary/5 dark:bg-primary/10 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
-                <Calendar className="w-12 h-12 text-primary/20" />
-                <div className="absolute top-4 right-4 px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full text-[10px] font-bold text-primary uppercase">
+                <Calendar className="w-12 h-12 text-primary/20 dark:text-primary/40" />
+                <div className="absolute top-4 right-4 px-3 py-1 bg-white/80 dark:bg-black/40 backdrop-blur-sm rounded-full text-[10px] font-bold text-primary uppercase">
                   Inscrições Abertas
                 </div>
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors line-clamp-1">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-app-fg group-hover:text-primary transition-colors line-clamp-1">
                     {fair.name}
                   </h3>
-                  <p className="text-xs text-slate-500 line-clamp-2 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-app-muted line-clamp-2 mt-1">
                     {fair.description || "Explore os desafios desta feira científica."}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-4 pt-2 border-t border-slate-50">
-                  <div className="flex items-center gap-1.5 text-slate-400">
+                <div className="flex items-center gap-4 pt-2 border-t border-slate-50 dark:border-app-border">
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-app-muted">
                     <Users className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase">Aberto a todos</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-app-muted">
                     <MapPin className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase">Online / Presencial</span>
                   </div>
@@ -238,11 +237,11 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
                 <div className="flex items-center justify-between pt-2">
                   <div className="flex -space-x-2">
                     {[1, 2, 3].map(i => (
-                      <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400">
+                      <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-app-card bg-slate-100 dark:bg-app-surface flex items-center justify-center text-[8px] font-bold text-slate-400 dark:text-app-muted">
                         {i}
                       </div>
                     ))}
-                    <div className="w-6 h-6 rounded-full border-2 border-white bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary">
+                    <div className="w-6 h-6 rounded-full border-2 border-white dark:border-app-card bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary">
                       +
                     </div>
                   </div>
@@ -257,10 +256,10 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
 
           {filteredFairs.length === 0 && (
             <div className="col-span-full py-20 text-center space-y-4">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                <Search className="w-8 h-8 text-slate-300" />
+              <div className="w-16 h-16 bg-slate-50 dark:bg-app-surface rounded-full flex items-center justify-center mx-auto">
+                <Search className="w-8 h-8 text-slate-300 dark:text-app-muted/40" />
               </div>
-              <p className="text-slate-400 font-medium">Nenhuma feira encontrada para sua busca.</p>
+              <p className="text-slate-400 dark:text-app-muted font-medium">Nenhuma feira encontrada para sua busca.</p>
             </div>
           )}
         </div>

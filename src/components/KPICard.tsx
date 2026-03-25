@@ -41,21 +41,21 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi }) => {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white elevation-1 p-6 rounded-xl flex flex-col gap-2 hover:scale-[1.02] transition-transform cursor-default"
+      className="bg-white dark:bg-app-card elevation-1 p-6 rounded-xl flex flex-col gap-2 hover:scale-[1.02] transition-all cursor-default"
     >
       <div className="flex justify-between items-start">
-        <p className="text-slate-500 text-sm font-medium">{kpi.label}</p>
-        <div className="bg-primary/10 p-2 rounded-lg">
+        <p className="text-slate-500 dark:text-app-muted text-sm font-medium">{kpi.label}</p>
+        <div className="bg-primary/10 dark:bg-primary/20 p-2 rounded-lg">
           <Icon className="text-primary w-5 h-5" />
         </div>
       </div>
       
-      <p className="text-3xl font-bold text-slate-900">{kpi.value}</p>
+      <p className="text-3xl font-bold text-slate-900 dark:text-app-fg">{kpi.value}</p>
       
       {kpi.trend && (
         <div className={cn(
           "flex items-center gap-1 text-xs font-bold",
-          kpi.trend.isPositive ? "text-emerald-600" : "text-red-500"
+          kpi.trend.isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
         )}>
           {kpi.trend.isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
           <span>{kpi.trend.value}</span>
@@ -63,21 +63,21 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi }) => {
       )}
 
       {kpi.status === 'Crítico' && (
-        <div className="flex items-center gap-1 text-red-500 text-xs font-bold">
+        <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-xs font-bold">
           <Timer className="w-3 h-3" />
           <span>Crítico</span>
         </div>
       )}
 
       {kpi.status === 'Atenção' && (
-        <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
+        <div className="flex items-center gap-1 text-amber-500 dark:text-amber-400 text-xs font-bold">
           <Timer className="w-3 h-3" />
           <span>Atenção</span>
         </div>
       )}
 
       {kpi.status === 'Normal' && (
-        <div className="flex items-center gap-1 text-emerald-500 text-xs font-bold">
+        <div className="flex items-center gap-1 text-emerald-500 dark:text-emerald-400 text-xs font-bold">
           <CheckCircle className="w-3 h-3" />
           <span>Normal</span>
         </div>

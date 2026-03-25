@@ -9,11 +9,134 @@
   
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
+
+  /* Theme variables */
+  --color-app-bg: var(--app-bg);
+  --color-app-fg: var(--app-fg);
+  --color-app-card: var(--app-card);
+  --color-app-border: var(--app-border);
+  --color-app-muted: var(--app-muted);
+  --color-app-surface: var(--app-surface);
+}
+
+:root {
+  --app-bg: #FBFDF9;
+  --app-fg: #0f172a; /* slate-900 */
+  --app-card: #ffffff;
+  --app-border: rgba(0, 133, 93, 0.1); /* primary/10 */
+  --app-muted: #64748b; /* slate-500 */
+  --app-surface: #f8fafc; /* slate-50 */
+}
+
+.dark {
+  --app-bg: #0A120F;
+  --app-fg: #f8fafc; /* slate-50 */
+  --app-card: #121F1A;
+  --app-border: #1e293b; /* slate-800 */
+  --app-muted: #94a3b8; /* slate-400 */
+  --app-surface: #0f1a16;
 }
 
 @layer base {
   body {
-    @apply bg-[#FBFDF9] text-slate-900 font-sans antialiased;
+    @apply bg-app-bg text-app-fg font-sans antialiased transition-colors duration-300;
+  }
+
+  /* Global overrides for common Tailwind classes to ensure dark mode coverage */
+  .dark .bg-white, 
+  .dark .bg-background-light,
+  .dark .bg-slate-50,
+  .dark .bg-slate-100,
+  .dark .bg-blue-50,
+  .dark .bg-emerald-50,
+  .dark .bg-red-50,
+  .dark .bg-amber-50,
+  .dark .bg-gray-50,
+  .dark .bg-gray-100 {
+    background-color: var(--app-card) !important;
+    border-color: var(--app-border) !important;
+  }
+
+  .dark .bg-\[\#FBFDF9\], .dark .bg-slate-50\/50, .dark .bg-background-light {
+    background-color: var(--app-bg) !important;
+  }
+
+  .dark .text-slate-900, 
+  .dark .text-slate-800,
+  .dark .text-slate-700,
+  .dark .text-gray-900,
+  .dark .text-gray-800,
+  .dark .text-gray-700,
+  .dark .text-black {
+    color: var(--app-fg) !important;
+  }
+
+  .dark .text-slate-600, 
+  .dark .text-slate-500, 
+  .dark .text-slate-400,
+  .dark .text-gray-600,
+  .dark .text-gray-500,
+  .dark .text-gray-400 {
+    color: var(--app-muted) !important;
+  }
+
+  .dark .border-slate-100, 
+  .dark .border-slate-200, 
+  .dark .border-slate-50, 
+  .dark .border-gray-100,
+  .dark .border-gray-200,
+  .dark .border-primary\/10, 
+  .dark .border-primary\/5,
+  .dark .border-red-100,
+  .dark .border-amber-100,
+  .dark .border-emerald-100,
+  .dark .border-blue-100 {
+    border-color: var(--app-border) !important;
+  }
+
+  .dark .bg-primary\/5, 
+  .dark .bg-primary\/10,
+  .dark .bg-primary\/20 {
+    background-color: rgba(0, 133, 93, 0.2) !important;
+  }
+
+  .dark .hover\:bg-primary\/5:hover, 
+  .dark .hover\:bg-primary\/10:hover,
+  .dark .hover\:bg-slate-50:hover,
+  .dark .hover\:bg-slate-50\/50:hover {
+    background-color: rgba(0, 133, 93, 0.15) !important;
+  }
+
+  .dark .elevation-1 {
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.6) !important;
+    background-color: var(--app-card) !important;
+  }
+
+  .dark input, 
+  .dark select, 
+  .dark textarea {
+    background-color: var(--app-surface) !important;
+    border-color: var(--app-border) !important;
+    color: var(--app-fg) !important;
+  }
+
+  .dark .shadow-sm, .dark .shadow-md, .dark .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  .dark .bg-emerald-100, .dark .bg-amber-100, .dark .bg-blue-100, .dark .bg-red-100 {
+    background-color: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid currentColor !important;
+  }
+
+  .dark .text-emerald-700 { color: #34d399 !important; }
+  .dark .text-amber-700 { color: #fbbf24 !important; }
+  .dark .text-blue-700 { color: #60a5fa !important; }
+  .dark .text-red-700 { color: #f87171 !important; }
+  .dark .text-purple-700 { color: #c084fc !important; }
+
+  .dark .bg-amber-50, .dark .bg-red-50, .dark .bg-blue-50, .dark .bg-emerald-50 {
+    background-color: rgba(0, 0, 0, 0.3) !important;
   }
 }
 

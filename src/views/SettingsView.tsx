@@ -96,30 +96,30 @@ export function SettingsView() {
   }
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-4xl mx-auto">
-      <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Configurações do Sistema</h2>
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+      <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Configurações do Sistema</h2>
 
       <div className="grid gap-6">
-        <section className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-            <Shield className="text-primary w-6 h-6 shrink-0" />
+        <section className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 lg:p-6 space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-50 dark:border-app-border pb-4">
+            <Shield className="text-primary dark:text-primary-light w-6 h-6 shrink-0" />
             <div>
-              <h3 className="text-lg font-bold">Segurança e Privacidade (RF15)</h3>
-              <p className="text-xs text-slate-400">Controle de isolamento por silos institucionais.</p>
+              <h3 className="text-lg font-bold dark:text-app-fg">Segurança e Privacidade (RF15)</h3>
+              <p className="text-xs text-slate-400 dark:text-app-muted">Controle de isolamento por silos institucionais.</p>
             </div>
           </div>
           
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 rounded-xl gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 dark:bg-app-surface rounded-xl gap-4">
               <div>
-                <p className="text-sm font-bold">Isolamento de Dados</p>
-                <p className="text-xs text-slate-500">Impedir que usuários vejam projetos de outras instituições.</p>
+                <p className="text-sm font-bold dark:text-app-fg">Isolamento de Dados</p>
+                <p className="text-xs text-slate-500 dark:text-app-muted">Impedir que usuários vejam projetos de outras instituições.</p>
               </div>
               <div 
                 onClick={() => toggleSetting('dataIsolation')}
                 className={cn(
                   "w-12 h-6 rounded-full relative cursor-pointer transition-colors shrink-0",
-                  settings?.dataIsolation ? "bg-primary" : "bg-slate-200"
+                  settings?.dataIsolation ? "bg-primary" : "bg-slate-200 dark:bg-app-border"
                 )}
               >
                 <motion.div 
@@ -128,16 +128,16 @@ export function SettingsView() {
                 />
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 rounded-xl gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 dark:bg-app-surface rounded-xl gap-4">
               <div>
-                <p className="text-sm font-bold">Anonimização Automática</p>
-                <p className="text-xs text-slate-500">Remover nomes de autores em exportações públicas.</p>
+                <p className="text-sm font-bold dark:text-app-fg">Anonimização Automática</p>
+                <p className="text-xs text-slate-500 dark:text-app-muted">Remover nomes de autores em exportações públicas.</p>
               </div>
               <div 
                 onClick={() => toggleSetting('autoAnonymization')}
                 className={cn(
                   "w-12 h-6 rounded-full relative cursor-pointer transition-colors shrink-0",
-                  settings?.autoAnonymization ? "bg-primary" : "bg-slate-200"
+                  settings?.autoAnonymization ? "bg-primary" : "bg-slate-200 dark:bg-app-border"
                 )}
               >
                 <motion.div 
@@ -149,48 +149,48 @@ export function SettingsView() {
           </div>
         </section>
 
-        <section className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-            <History className="text-primary w-6 h-6 shrink-0" />
+        <section className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 lg:p-6 space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-50 dark:border-app-border pb-4">
+            <History className="text-primary dark:text-primary-light w-6 h-6 shrink-0" />
             <div>
-              <h3 className="text-lg font-bold">Trilha de Auditoria (RF16)</h3>
-              <p className="text-xs text-slate-400">Registros imutáveis de acessos e alterações.</p>
+              <h3 className="text-lg font-bold dark:text-app-fg">Trilha de Auditoria (RF16)</h3>
+              <p className="text-xs text-slate-400 dark:text-app-muted">Registros imutáveis de acessos e alterações.</p>
             </div>
           </div>
           
           <div className="space-y-3">
             {logs.length > 0 ? logs.map((log, idx) => (
-              <div key={log.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border-b border-slate-50 last:border-none gap-2">
+              <div key={log.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border-b border-slate-50 dark:border-app-border last:border-none gap-2">
                 <div className="flex items-center gap-4">
                   <div className="w-2 h-2 rounded-full bg-primary/40 shrink-0" />
                   <div>
-                    <p className="text-sm font-bold text-slate-900">{log.action}</p>
-                    <p className="text-[10px] text-slate-400">Por {log.userName} em {log.target}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{log.action}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-app-muted">Por {log.userName} em {log.target}</p>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold text-slate-300 uppercase">
+                <span className="text-[10px] font-bold text-slate-300 dark:text-app-muted/40 uppercase">
                   {new Date(log.timestamp).toLocaleTimeString()}
                 </span>
               </div>
             )) : (
-              <p className="text-xs text-slate-400 text-center py-4">Nenhum log de auditoria encontrado.</p>
+              <p className="text-xs text-slate-400 dark:text-app-muted text-center py-4">Nenhum log de auditoria encontrado.</p>
             )}
-            <button className="w-full py-2 text-xs font-bold text-primary hover:underline">Ver Log Completo</button>
+            <button className="w-full py-2 text-xs font-bold text-primary dark:text-primary-light hover:underline">Ver Log Completo</button>
           </div>
         </section>
 
-        <section className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
-          <h3 className="text-lg font-bold">Integrações e API</h3>
+        <section className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
+          <h3 className="text-lg font-bold dark:text-app-fg">Integrações e API</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-4 border border-slate-100 rounded-xl hover:border-primary/20 transition-all cursor-pointer">
-              <Database className="w-5 h-5 text-slate-400 mb-2" />
-              <p className="text-sm font-bold">Webhooks</p>
-              <p className="text-[10px] text-slate-400">Notificações em tempo real.</p>
+            <div className="p-4 border border-slate-100 dark:border-app-border rounded-xl hover:border-primary/20 transition-all cursor-pointer">
+              <Database className="w-5 h-5 text-slate-400 dark:text-app-muted mb-2" />
+              <p className="text-sm font-bold dark:text-app-fg">Webhooks</p>
+              <p className="text-[10px] text-slate-400 dark:text-app-muted">Notificações em tempo real.</p>
             </div>
-            <div className="p-4 border border-slate-100 rounded-xl hover:border-primary/20 transition-all cursor-pointer">
-              <Globe className="w-5 h-5 text-slate-400 mb-2" />
-              <p className="text-sm font-bold">API Access</p>
-              <p className="text-[10px] text-slate-400">Tokens de acesso programático.</p>
+            <div className="p-4 border border-slate-100 dark:border-app-border rounded-xl hover:border-primary/20 transition-all cursor-pointer">
+              <Globe className="w-5 h-5 text-slate-400 dark:text-app-muted mb-2" />
+              <p className="text-sm font-bold dark:text-app-fg">API Access</p>
+              <p className="text-[10px] text-slate-400 dark:text-app-muted">Tokens de acesso programático.</p>
             </div>
           </div>
         </section>
