@@ -143,14 +143,14 @@ export function LoginView() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white elevation-1 rounded-3xl p-8 space-y-8 border border-slate-100"
+        className="max-w-md w-full bg-white elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100"
       >
         <div className="text-center space-y-2">
-          <div className="inline-flex bg-primary rounded-2xl p-4 mb-4 shadow-sm">
-            <Beaker className="text-white w-8 h-8" />
+          <div className="inline-flex bg-primary rounded-2xl p-3 sm:p-4 mb-2 sm:mb-4 shadow-sm">
+            <Beaker className="text-white w-6 h-6 sm:w-8 sm:h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Astea Scientific</h1>
-          <p className="text-slate-500 text-sm">Gestão Inteligente de Feiras Científicas</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Astea Scientific</h1>
+          <p className="text-slate-500 text-xs sm:text-sm">Gestão Inteligente de Feiras Científicas</p>
         </div>
 
         <div className="flex p-1 bg-slate-50 rounded-xl">

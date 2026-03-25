@@ -96,13 +96,13 @@ export function SettingsView() {
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <h2 className="text-2xl font-bold text-slate-900">Configurações do Sistema</h2>
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-4xl mx-auto">
+      <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Configurações do Sistema</h2>
 
       <div className="grid gap-6">
-        <section className="bg-white elevation-1 rounded-2xl p-6 space-y-6">
+        <section className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-            <Shield className="text-primary w-6 h-6" />
+            <Shield className="text-primary w-6 h-6 shrink-0" />
             <div>
               <h3 className="text-lg font-bold">Segurança e Privacidade (RF15)</h3>
               <p className="text-xs text-slate-400">Controle de isolamento por silos institucionais.</p>
@@ -110,7 +110,7 @@ export function SettingsView() {
           </div>
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 rounded-xl gap-4">
               <div>
                 <p className="text-sm font-bold">Isolamento de Dados</p>
                 <p className="text-xs text-slate-500">Impedir que usuários vejam projetos de outras instituições.</p>
@@ -118,7 +118,7 @@ export function SettingsView() {
               <div 
                 onClick={() => toggleSetting('dataIsolation')}
                 className={cn(
-                  "w-12 h-6 rounded-full relative cursor-pointer transition-colors",
+                  "w-12 h-6 rounded-full relative cursor-pointer transition-colors shrink-0",
                   settings?.dataIsolation ? "bg-primary" : "bg-slate-200"
                 )}
               >
@@ -128,7 +128,7 @@ export function SettingsView() {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 rounded-xl gap-4">
               <div>
                 <p className="text-sm font-bold">Anonimização Automática</p>
                 <p className="text-xs text-slate-500">Remover nomes de autores em exportações públicas.</p>
@@ -136,7 +136,7 @@ export function SettingsView() {
               <div 
                 onClick={() => toggleSetting('autoAnonymization')}
                 className={cn(
-                  "w-12 h-6 rounded-full relative cursor-pointer transition-colors",
+                  "w-12 h-6 rounded-full relative cursor-pointer transition-colors shrink-0",
                   settings?.autoAnonymization ? "bg-primary" : "bg-slate-200"
                 )}
               >
@@ -149,9 +149,9 @@ export function SettingsView() {
           </div>
         </section>
 
-        <section className="bg-white elevation-1 rounded-2xl p-6 space-y-6">
+        <section className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-            <History className="text-primary w-6 h-6" />
+            <History className="text-primary w-6 h-6 shrink-0" />
             <div>
               <h3 className="text-lg font-bold">Trilha de Auditoria (RF16)</h3>
               <p className="text-xs text-slate-400">Registros imutáveis de acessos e alterações.</p>
@@ -160,9 +160,9 @@ export function SettingsView() {
           
           <div className="space-y-3">
             {logs.length > 0 ? logs.map((log, idx) => (
-              <div key={log.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-none">
+              <div key={log.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border-b border-slate-50 last:border-none gap-2">
                 <div className="flex items-center gap-4">
-                  <div className="w-2 h-2 rounded-full bg-primary/40" />
+                  <div className="w-2 h-2 rounded-full bg-primary/40 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-slate-900">{log.action}</p>
                     <p className="text-[10px] text-slate-400">Por {log.userName} em {log.target}</p>
@@ -179,9 +179,9 @@ export function SettingsView() {
           </div>
         </section>
 
-        <section className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
+        <section className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
           <h3 className="text-lg font-bold">Integrações e API</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-4 border border-slate-100 rounded-xl hover:border-primary/20 transition-all cursor-pointer">
               <Database className="w-5 h-5 text-slate-400 mb-2" />
               <p className="text-sm font-bold">Webhooks</p>

@@ -19,15 +19,15 @@ export function DashboardView() {
   }, []);
 
   return (
-    <div className="p-8 space-y-8 overflow-y-auto">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 overflow-y-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {MOCK_KPIS.map((kpi) => (
           <KPICard key={kpi.label} kpi={kpi} />
         ))}
       </div>
 
-      <div className="grid grid-cols-10 gap-6">
-        <div className="col-span-10 lg:col-span-7 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 lg:gap-6">
+        <div className="lg:col-span-7 space-y-4 lg:space-y-6">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -55,7 +55,7 @@ export function DashboardView() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="col-span-10 lg:col-span-3"
+          className="lg:col-span-3"
         >
           <AlertsPanel alerts={MOCK_ALERTS} />
         </motion.div>

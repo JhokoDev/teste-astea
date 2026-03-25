@@ -37,26 +37,26 @@ export function FairsView() {
 
   if (isCreating) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-6 lg:mb-8">
           <button onClick={() => setIsCreating(false)} className="text-slate-400 hover:text-primary transition-colors">
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
-          <h2 className="text-2xl font-bold text-slate-900">Configurar Nova Feira</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Configurar Nova Feira</h2>
         </div>
 
         {/* Stepper */}
-        <div className="flex items-center justify-between mb-12 relative">
+        <div className="flex items-center justify-between mb-8 lg:mb-12 relative overflow-x-auto pb-4">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -translate-y-1/2 -z-10" />
           {steps.map((step, idx) => (
-            <div key={step} className="flex flex-col items-center gap-2 bg-[#FBFDF9] px-4">
+            <div key={step} className="flex flex-col items-center gap-2 bg-[#FBFDF9] px-2 lg:px-4 min-w-[80px]">
               <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all",
+                "w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center text-sm lg:text-base font-bold transition-all",
                 currentStep === step ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
               )}>
                 {idx + 1}
               </div>
-              <span className={cn("text-xs font-bold", currentStep === step ? "text-primary" : "text-slate-400")}>
+              <span className={cn("text-[10px] lg:text-xs font-bold", currentStep === step ? "text-primary" : "text-slate-400")}>
                 {step}
               </span>
             </div>
@@ -67,7 +67,7 @@ export function FairsView() {
           key={currentStep}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white elevation-1 rounded-2xl p-8 space-y-6"
+          className="bg-white elevation-1 rounded-2xl p-4 lg:p-8 space-y-6"
         >
           {currentStep === 'Identidade' && (
             <div className="space-y-4">
@@ -88,7 +88,7 @@ export function FairsView() {
           {currentStep === 'Datas' && (
             <div className="space-y-4">
               <h3 className="text-lg font-bold">Cronograma (RF02)</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">Início Inscrições</label>
                   <input type="date" className="w-full bg-slate-50 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20" />
@@ -116,7 +116,7 @@ export function FairsView() {
                 const idx = steps.indexOf(currentStep);
                 if (idx > 0) setCurrentStep(steps[idx - 1]);
               }}
-              className="px-6 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
+              className="px-4 lg:px-6 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
             >
               Anterior
             </button>
@@ -126,7 +126,7 @@ export function FairsView() {
                 if (idx < steps.length - 1) setCurrentStep(steps[idx + 1]);
                 else handleFinish();
               }}
-              className="px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-md"
+              className="px-4 lg:px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-md"
             >
               {currentStep === 'Regras' ? 'Finalizar' : 'Próximo'}
             </button>
@@ -137,12 +137,12 @@ export function FairsView() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-900">Gestão de Feiras</h2>
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Gestão de Feiras</h2>
         <button 
           onClick={() => setIsCreating(true)}
-          className="bg-primary text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold shadow-md hover:scale-105 transition-all"
+          className="w-full sm:w-auto bg-primary text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold shadow-md hover:scale-105 transition-all"
         >
           <Plus className="w-5 h-5" />
           <span>Nova Feira</span>
@@ -154,7 +154,7 @@ export function FairsView() {
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
           {fairs.map((fair) => (
             <div key={fair.id} className={cn(
               "bg-white elevation-1 rounded-2xl p-6 border-l-4",

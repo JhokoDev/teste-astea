@@ -19,20 +19,20 @@ export function ProjectsView() {
 
   if (selectedProject) {
     return (
-      <div className="p-8 max-w-5xl mx-auto space-y-8">
+      <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6 lg:space-y-8">
         <div className="flex items-center gap-4">
           <button onClick={() => setSelectedProject(null)} className="text-slate-400 hover:text-primary transition-colors">
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{selectedProject.name}</h2>
-            <p className="text-sm text-slate-500">ID: {selectedProject.id}</p>
+            <h2 className="text-xl lg:text-2xl font-bold text-slate-900">{selectedProject.name}</h2>
+            <p className="text-xs lg:text-sm text-slate-500">ID: {selectedProject.id}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-6">
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+            <div className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
                 Resumo do Projeto (RF05)
@@ -42,7 +42,7 @@ export function ProjectsView() {
               </p>
             </div>
 
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
+            <div className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <History className="w-5 h-5 text-primary" />
                 Histórico de Versões (RF06)
@@ -67,8 +67,8 @@ export function ProjectsView() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-white elevation-1 rounded-2xl p-6 space-y-4">
+          <div className="space-y-4 lg:space-y-6">
+            <div className="bg-white elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
                 Equipe (RF07)
@@ -93,15 +93,15 @@ export function ProjectsView() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-900">Projetos Submetidos</h2>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-xl lg:text-2xl font-bold text-slate-900">Projetos Submetidos</h2>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button className="flex-1 sm:flex-none px-4 py-2 bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
             <Filter className="w-4 h-4" />
             Filtrar
           </button>
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
+          <button className="flex-1 sm:flex-none px-4 py-2 bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
             <Download className="w-4 h-4" />
             Exportar
           </button>
@@ -113,32 +113,32 @@ export function ProjectsView() {
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : (
-        <div className="bg-white elevation-1 rounded-2xl overflow-hidden">
-          <table className="w-full text-left">
+        <div className="bg-white elevation-1 rounded-2xl overflow-x-auto">
+          <table className="w-full text-left min-w-[600px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Projeto</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Categoria</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Ações</th>
+                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 uppercase">Projeto</th>
+                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 uppercase">Categoria</th>
+                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 uppercase">Status</th>
+                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 uppercase">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {projects.map((project) => (
                 <tr key={project.id} className="hover:bg-primary/5 transition-colors group">
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-4">
                     <p className="text-sm font-bold text-slate-900">{project.name}</p>
                     <p className="text-[10px] text-slate-400">ID: {project.id}</p>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{project.category}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-4 text-sm text-slate-600">{project.category}</td>
+                  <td className="px-4 lg:px-6 py-4">
                     <span className={cn(
                       "px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700"
                     )}>
                       {project.status || 'Ativo'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-4">
                     <button 
                       onClick={() => setSelectedProject(project)}
                       className="text-xs font-bold text-primary hover:underline"
@@ -150,7 +150,7 @@ export function ProjectsView() {
               ))}
               {projects.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-20 text-center text-slate-400">
+                  <td colSpan={4} className="px-4 lg:px-6 py-20 text-center text-slate-400">
                     Nenhum projeto submetido até o momento.
                   </td>
                 </tr>

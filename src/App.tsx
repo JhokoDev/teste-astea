@@ -16,12 +16,14 @@ import { Plus, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabase';
 import { Toaster } from 'sonner';
+import { cn } from './lib/utils';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('painel');
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Check for mock dev user first
@@ -106,10 +108,32 @@ export default function App() {
         <LoginView />
       ) : (
         <>
-          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          {/* Mobile Sidebar Overlay */}
+          <AnimatePresence>
+            {isMobileSidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+              />
+            )}
+          </AnimatePresence>
+
+          <div className={cn(
+            "fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:relative lg:translate-x-0",
+            isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}>
+            <Sidebar 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab}
+              onClose={() => setIsMobileSidebarOpen(false)}
+            />
+          </div>
           
-          <main className="flex-1 flex flex-col min-w-0">
-            <Header />
+          <main className="flex-1 flex flex-col min-w-0 w-full">
+            <Header onMenuClick={() => setIsMobileSidebarOpen(true)} />
             
             <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
@@ -130,10 +154,10 @@ export default function App() {
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="fixed bottom-8 right-8 bg-primary text-white px-6 py-4 rounded-full elevation-1 flex items-center gap-3 shadow-lg hover:bg-primary/90 transition-all z-20"
+            className="fixed bottom-6 right-6 lg:bottom-8 lg:right-8 bg-primary text-white p-4 lg:px-6 lg:py-4 rounded-full elevation-1 flex items-center gap-3 shadow-lg hover:bg-primary/90 transition-all z-20"
           >
             <Plus className="w-5 h-5" />
-            <span className="font-bold">Nova Etapa</span>
+            <span className="font-bold hidden lg:inline">Nova Etapa</span>
           </motion.button>
         </>
       )}

@@ -25,13 +25,19 @@ const navItems: { icon: any; label: string; id: TabId }[] = [
 interface SidebarProps {
   activeTab: TabId;
   onTabChange: (id: TabId) => void;
+  onClose?: () => void;
 }
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, onClose }: SidebarProps) {
   const handleLogout = async () => {
     localStorage.removeItem('dev_user');
     await supabase.auth.signOut();
     window.location.reload();
+  };
+
+  const handleTabClick = (id: TabId) => {
+    onTabChange(id);
+    if (onClose) onClose();
   };
 
   return (
@@ -51,7 +57,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => onTabChange(item.id)}
+              onClick={() => handleTabClick(item.id)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left",
                 activeTab === item.id 
