@@ -115,7 +115,7 @@ export default function App() {
 
         if (error && error.code === 'PGRST116') { // Not found
           const isAdminEmail = authUser.email === 'admin@gmail.com' || authUser.email === 'aistudiojhoko@gmail.com';
-          const { data: newProfile } = await supabase.from('users').insert({
+          const { data: newProfile, error: insertError } = await supabase.from('users').insert({
             uid: authUser.id,
             email: authUser.email,
             displayName: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
@@ -123,9 +123,16 @@ export default function App() {
             role: isAdminEmail ? 'admin' : 'student',
             institutionId: 'default-inst'
           }).select().single();
-          setProfile(newProfile);
+          
+          if (insertError) {
+            console.error('Error creating user profile in App.tsx:', insertError);
+          } else {
+            setProfile(newProfile);
+          }
         } else if (userProfile) {
           setProfile(userProfile);
+        } else if (error) {
+          console.error('Error fetching user profile in App.tsx:', error);
         }
         setLoading(false);
         setIsAuthReady(true);

@@ -76,12 +76,23 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
     const checkApplication = async () => {
       if (!selectedFair || !profile) return;
       
-      const { data } = await supabase
+      const isMockId = profile.uid.startsWith('00000000') || 
+                       profile.uid.startsWith('11111111') || 
+                       profile.uid.startsWith('22222222') || 
+                       profile.uid === 'dev-admin-id';
+
+      let query = supabase
         .from('evaluator_applications')
         .select('id')
-        .eq('fairId', selectedFair.id)
-        .eq('userId', profile.uid)
-        .maybeSingle();
+        .eq('fairId', selectedFair.id);
+      
+      if (isMockId) {
+        query = query.is('userId', null);
+      } else {
+        query = query.eq('userId', profile.uid);
+      }
+        
+      const { data } = await query.maybeSingle();
       
       setHasApplied(!!data);
     };
@@ -96,9 +107,24 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
       setApplying(true);
       await fairsService.applyAsEvaluator(selectedFair.id);
       toast.success('Candidatura enviada com sucesso! Aguarde a revisão do organizador.');
+      setHasApplied(true);
     } catch (error: any) {
       console.error('Erro ao candidatar-se:', error);
-      toast.error('Erro ao enviar candidatura. Você pode já ter se candidatado.');
+      let message = 'Erro ao enviar candidatura.';
+      
+      try {
+        const errObj = JSON.parse(error.message);
+        if (errObj.error?.includes('duplicate key value violates unique constraint')) {
+          message = 'Você já se candidatou para esta feira.';
+          setHasApplied(true);
+        } else {
+          message = `Erro: ${errObj.error || error.message}`;
+        }
+      } catch (e) {
+        message = `Erro: ${error.message}`;
+      }
+      
+      toast.error(message);
     } finally {
       setApplying(false);
     }

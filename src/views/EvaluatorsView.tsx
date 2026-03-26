@@ -71,12 +71,24 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
         // Fetch projects assigned to the current evaluator
         if (profile?.uid) {
+          const isMockId = profile.uid.startsWith('00000000') || 
+                           profile.uid.startsWith('11111111') || 
+                           profile.uid.startsWith('22222222') || 
+                           profile.uid === 'dev-admin-id';
+
           // Get fairs where user is approved evaluator
-          const { data: apps } = await supabase
+          let appsQuery = supabase
             .from('evaluator_applications')
             .select('fairId')
-            .eq('userId', profile.uid)
             .eq('status', 'aprovado');
+          
+          if (isMockId) {
+            appsQuery = appsQuery.is('userId', null);
+          } else {
+            appsQuery = appsQuery.eq('userId', profile.uid);
+          }
+
+          const { data: apps } = await appsQuery;
           
           const approvedFairIds = apps?.map(a => a.fairId) || [];
           
@@ -90,11 +102,18 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
             setAssignedProjects(projs || []);
 
             // Get completed evaluations to calculate progress
-            const { data: evals } = await supabase
+            let evalsQuery = supabase
               .from('evaluations')
               .select('projectId')
-              .eq('evaluatorId', profile.uid)
               .eq('status', 'finalizado');
+            
+            if (isMockId) {
+              evalsQuery = evalsQuery.is('evaluatorId', null);
+            } else {
+              evalsQuery = evalsQuery.eq('evaluatorId', profile.uid);
+            }
+
+            const { data: evals } = await evalsQuery;
             
             setEvaluatorStats({
               completed: evals?.length || 0,

@@ -47,8 +47,11 @@ async function logAction(action: string, table: string, id: string, oldData?: an
   if (!userId) return;
 
   // For database foreign keys to auth.users, we must use a real UUID or null
-  // Handle both old 'dev-admin-id' and new '00000000-0000-0000-0000-000000000000'
-  const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
+  // Handle all mock IDs
+  const isMockId = userId.startsWith('00000000') || 
+                   userId.startsWith('11111111') || 
+                   userId.startsWith('22222222') || 
+                   userId === 'dev-admin-id';
   const dbUserId = isMockId ? null : userId;
 
   // Get user's institution
@@ -105,8 +108,11 @@ export const fairsService = {
     const userId = user?.id || mockUser?.id;
     
     // For database foreign keys to auth.users, we must use a real UUID or null
-    // Handle both old 'dev-admin-id' and new '00000000-0000-0000-0000-000000000000'
-    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
+    // Handle all mock IDs
+    const isMockId = userId?.startsWith('00000000') || 
+                     userId?.startsWith('11111111') || 
+                     userId?.startsWith('22222222') || 
+                     userId === 'dev-admin-id';
     const dbUserId = isMockId ? null : userId;
 
     console.log('supabaseService: userId for creation:', userId, 'dbUserId:', dbUserId);
@@ -174,8 +180,8 @@ export const fairsService = {
     const mockUserStr = localStorage.getItem('dev_user');
     const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
     const userId = user?.id || mockUser?.id;
-    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
-    const dbUserId = isMockId ? null : userId;
+    
+    if (!userId) throw new Error('User not authenticated');
 
     const { data: profile } = await supabase.from('users').select('institutionId').eq('uid', userId).maybeSingle();
 
@@ -183,7 +189,7 @@ export const fairsService = {
       .from('evaluator_applications')
       .insert({
         fairId,
-        userId: dbUserId,
+        userId: userId, // Use the ID directly (mock or real) since column is text
         institutionId: profile?.institutionId || 'default-inst',
         status: 'pendente'
       })
@@ -240,8 +246,8 @@ export const projectsService = {
     const mockUserStr = localStorage.getItem('dev_user');
     const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
     const userId = user?.id || mockUser?.id;
-    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
-    const dbUserId = isMockId ? null : userId;
+    
+    if (!userId) throw new Error('User not authenticated');
 
     const { data: profile } = await supabase.from('users').select('institutionId').eq('uid', userId).maybeSingle();
 
@@ -267,7 +273,7 @@ export const projectsService = {
       .from('projects')
       .insert({
         ...sanitizedData,
-        creatorId: dbUserId,
+        creatorId: userId,
         institutionId: profile?.institutionId || 'default-inst',
         status: 'submetido'
       })
@@ -283,7 +289,7 @@ export const projectsService = {
         .insert({
           ...basicData,
           fairId: fairId, // Still need this as it's a foreign key
-          creatorId: dbUserId,
+          creatorId: userId,
           institutionId: profile?.institutionId || 'default-inst',
           status: 'submetido'
         })
@@ -302,7 +308,7 @@ export const projectsService = {
         projectId: newProject.id,
         version_number: 1,
         data: newProject,
-        created_by: dbUserId
+        createdBy: userId
       });
       
       if (versionError) {
@@ -318,7 +324,9 @@ export const projectsService = {
   updateProject: async (id: string, data: Partial<Project>, justification?: string) => {
     const { data: oldProject } = await supabase.from('projects').select('*').eq('id', id).single();
     const { data: { user } } = await supabase.auth.getUser();
-    const dbUserId = user?.id || '00000000-0000-0000-0000-000000000000';
+    const mockUserStr = localStorage.getItem('dev_user');
+    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
+    const userId = user?.id || mockUser?.id || '00000000-0000-0000-0000-000000000000';
 
     const newVersionNumber = (oldProject?.current_version || 1) + 1;
 
@@ -368,7 +376,7 @@ export const projectsService = {
         projectId: id,
         version_number: newVersionNumber,
         data: updatedProject,
-        created_by: dbUserId
+        createdBy: userId
       });
 
       if (versionError) {
@@ -401,14 +409,14 @@ export const evaluationsService = {
     const mockUserStr = localStorage.getItem('dev_user');
     const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
     const userId = user?.id || mockUser?.id;
-    const isMockId = userId === '00000000-0000-0000-0000-000000000000' || userId === 'dev-admin-id';
-    const dbUserId = isMockId ? null : userId;
+    
+    if (!userId) throw new Error('User not authenticated');
 
     const { data: newEval, error } = await supabase
       .from('evaluations')
       .insert({
         ...data,
-        evaluatorId: dbUserId,
+        evaluatorId: userId,
         status: 'finalizado'
       })
       .select()

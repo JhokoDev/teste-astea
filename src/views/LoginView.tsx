@@ -130,7 +130,7 @@ export function LoginView() {
             console.error("Error creating user profile:", insertError);
             // We don't throw here because the user is already created in Auth
             // They might just need to sync later or we can try again
-            toast.warning('Conta criada, mas houve um erro ao salvar seu perfil. Tente entrar novamente.');
+            toast.warning(`Conta criada, mas houve um erro ao salvar seu perfil: ${insertError.message}. Tente entrar novamente.`);
           } else {
             toast.success('Conta criada com sucesso! Verifique seu e-mail se necessário.');
           }
