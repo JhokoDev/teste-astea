@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Calendar, Users, ChevronRight, Loader2, Info, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Search, MapPin, Calendar, Users, ChevronRight, Loader2, Info, ExternalLink, ShieldCheck, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
@@ -157,6 +157,39 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
                 </div>
               </div>
             </div>
+
+            {selectedFair.structure?.custom_form && selectedFair.structure.custom_form.length > 0 && (
+              <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-primary dark:text-primary-light">
+                  <FileText className="w-5 h-5" />
+                  Campos do Formulário
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-app-muted">
+                  Além das informações básicas, esta feira solicita os seguintes campos para a submissão do projeto:
+                </p>
+                <div className="space-y-3">
+                  {selectedFair.structure.custom_form.map(field => (
+                    <div key={field.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-app-surface rounded-xl border border-slate-100 dark:border-app-border">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold dark:text-app-fg">
+                          {field.label}
+                          {field.required && <span className="text-red-500 ml-1">*</span>}
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-medium">{field.type}</span>
+                      </div>
+                      {field.helpText && (
+                        <div className="group relative">
+                          <Info className="w-4 h-4 text-slate-300 dark:text-app-muted/40 cursor-help" />
+                          <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            {field.helpText}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">

@@ -3,11 +3,11 @@ import { Plus, Calendar, Shield, Layout, ChevronRight, CheckCircle2, Clock, Load
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
-import { Fair, EvaluationCriteria, User } from '../types';
+import { Fair, EvaluationCriteria, User, FormField } from '../types';
 import { toast } from 'sonner';
 import { supabase } from '../supabase';
 
-type CreationStep = 'Identidade' | 'Datas' | 'Estrutura' | 'Regras' | 'Revisão';
+type CreationStep = 'Identidade' | 'Datas' | 'Estrutura' | 'Formulário' | 'Regras' | 'Revisão';
 
 interface FairsViewProps {
   profile?: User | null;
@@ -23,6 +23,15 @@ export function FairsView({ profile }: FairsViewProps) {
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
   const [evaluatorCounts, setEvaluatorCounts] = useState<Record<string, number>>({});
   const [pendingEvaluatorCounts, setPendingEvaluatorCounts] = useState<Record<string, number>>({});
+
+  const [newField, setNewField] = useState<Partial<FormField>>({
+    label: '',
+    type: 'text',
+    required: false,
+    options: [],
+    placeholder: '',
+    helpText: ''
+  });
 
   const userRole = profile?.role || 'student';
   const userId = profile?.uid;
@@ -43,7 +52,8 @@ export function FairsView({ profile }: FairsViewProps) {
       categories: [],
       modalities: [],
       target_audience: [],
-      location_type: 'Híbrido'
+      location_type: 'Híbrido',
+      custom_form: []
     },
     rules: {
       blind_evaluation: false,
@@ -117,7 +127,7 @@ export function FairsView({ profile }: FairsViewProps) {
     return () => unsubscribe();
   }, [userRole, userId]);
 
-  const steps: CreationStep[] = ['Identidade', 'Datas', 'Estrutura', 'Regras', 'Revisão'];
+  const steps: CreationStep[] = ['Identidade', 'Datas', 'Estrutura', 'Formulário', 'Regras', 'Revisão'];
 
   const validateDates = () => {
     const d = formData.dates;
@@ -205,7 +215,8 @@ export function FairsView({ profile }: FairsViewProps) {
           categories: [], 
           modalities: [],
           target_audience: [],
-          location_type: 'Híbrido'
+          location_type: 'Híbrido',
+          custom_form: []
         },
         rules: { blind_evaluation: false, min_evaluators_per_project: 3, tie_breaker_hierarchy: [] }
       });
@@ -246,6 +257,49 @@ export function FairsView({ profile }: FairsViewProps) {
     }));
   };
 
+  const addFormField = () => {
+    if (!newField.label) {
+      toast.error('O rótulo do campo é obrigatório.');
+      return;
+    }
+    const field: FormField = {
+      id: Math.random().toString(36).substr(2, 9),
+      label: newField.label,
+      type: newField.type as any || 'text',
+      required: !!newField.required,
+      options: newField.options || [],
+      placeholder: newField.placeholder || '',
+      helpText: newField.helpText || ''
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      structure: {
+        ...prev.structure!,
+        custom_form: [...(prev.structure?.custom_form || []), field]
+      }
+    }));
+
+    setNewField({
+      label: '',
+      type: 'text',
+      required: false,
+      options: [],
+      placeholder: '',
+      helpText: ''
+    });
+  };
+
+  const removeFormField = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      structure: {
+        ...prev.structure!,
+        custom_form: prev.structure?.custom_form?.filter(f => f.id !== id) || []
+      }
+    }));
+  };
+
   const handleEdit = (fair: Fair) => {
     setFormData({
       name: fair.name,
@@ -255,7 +309,8 @@ export function FairsView({ profile }: FairsViewProps) {
       structure: {
         ...fair.structure,
         target_audience: Array.isArray(fair.structure?.target_audience) ? fair.structure.target_audience : [],
-        location_type: fair.structure?.location_type || 'Híbrido'
+        location_type: fair.structure?.location_type || 'Híbrido',
+        custom_form: fair.structure?.custom_form || []
       },
       rules: fair.rules
     });
@@ -521,6 +576,111 @@ export function FairsView({ profile }: FairsViewProps) {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'Formulário' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold dark:text-app-fg">Formulário de Inscrição Personalizado</h3>
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-full font-bold uppercase">Opcional</span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-app-muted">
+                Defina campos adicionais que os estudantes devem preencher ao submeter projetos para esta feira.
+              </p>
+
+              <div className="bg-slate-50 dark:bg-app-surface p-4 rounded-xl space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase">Rótulo do Campo</label>
+                    <input 
+                      type="text" 
+                      value={newField.label}
+                      onChange={e => setNewField({...newField, label: e.target.value})}
+                      className="w-full bg-white dark:bg-app-card border-none rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                      placeholder="Ex: Link do Vídeo, Resumo Expandido..." 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase">Tipo de Campo</label>
+                    <select 
+                      value={newField.type}
+                      onChange={e => setNewField({...newField, type: e.target.value as any})}
+                      className="w-full bg-white dark:bg-app-card border-none rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                    >
+                      <option value="text">Texto Curto</option>
+                      <option value="textarea">Texto Longo</option>
+                      <option value="number">Número</option>
+                      <option value="date">Data</option>
+                      <option value="select">Seleção Única</option>
+                      <option value="checkbox">Múltipla Escolha</option>
+                      <option value="file">Upload de Arquivo</option>
+                      <option value="link">Link Externo</option>
+                    </select>
+                  </div>
+                  {(newField.type === 'select' || newField.type === 'checkbox') && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase">Opções (separadas por vírgula)</label>
+                      <input 
+                        type="text" 
+                        value={newField.options?.join(', ')}
+                        onChange={e => setNewField({...newField, options: e.target.value.split(',').map(s => s.trim()).filter(s => s)})}
+                        className="w-full bg-white dark:bg-app-card border-none rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                        placeholder="Opção 1, Opção 2, Opção 3..." 
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 pt-2">
+                    <input 
+                      type="checkbox" 
+                      id="fieldRequired"
+                      checked={newField.required}
+                      onChange={e => setNewField({...newField, required: e.target.checked})}
+                      className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="fieldRequired" className="text-xs font-bold text-slate-600 dark:text-app-muted cursor-pointer">Obrigatório</label>
+                  </div>
+                </div>
+                <button 
+                  onClick={addFormField}
+                  className="w-full py-2 bg-primary/10 text-primary dark:text-primary-light rounded-lg text-xs font-bold hover:bg-primary/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar Campo ao Formulário
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Campos do Formulário</h4>
+                {formData.structure?.custom_form?.length === 0 ? (
+                  <p className="text-xs text-slate-400 dark:text-app-muted italic">Nenhum campo personalizado adicionado.</p>
+                ) : (
+                  <div className="grid gap-3">
+                    {formData.structure?.custom_form?.map((field, idx) => (
+                      <div key={field.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-app-surface rounded-xl border border-slate-100 dark:border-app-border">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-white dark:bg-app-card rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold dark:text-app-fg">
+                              {field.label}
+                              {field.required && <span className="text-red-500 ml-1">*</span>}
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-bold">{field.type}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => removeFormField(field.id)}
+                          className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

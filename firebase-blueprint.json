@@ -39,7 +39,22 @@
             "categories": { "type": "array", "items": { "type": "string" } },
             "modalities": { "type": "array", "items": { "type": "string" } },
             "target_audience": { "type": "array", "items": { "type": "string" } },
-            "location_type": { "type": "string" }
+            "location_type": { "type": "string" },
+            "custom_form": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "label": { "type": "string" },
+                  "type": { "type": "string", "enum": ["text", "textarea", "number", "select", "checkbox", "date", "file", "link"] },
+                  "required": { "type": "boolean" },
+                  "options": { "type": "array", "items": { "type": "string" } },
+                  "placeholder": { "type": "string" },
+                  "helpText": { "type": "string" }
+                }
+              }
+            }
           }
         }
       },
@@ -51,16 +66,18 @@
       "type": "object",
       "properties": {
         "fairId": { "type": "string" },
-        "name": { "type": "string" },
+        "title": { "type": "string" },
         "category": { "type": "string" },
+        "modality": { "type": "string" },
         "abstract": { "type": "string" },
         "status": { "type": "string" },
         "studentIds": { "type": "array", "items": { "type": "string" } },
         "mentorId": { "type": "string" },
         "institutionId": { "type": "string" },
-        "score": { "type": "number" }
+        "score": { "type": "number" },
+        "custom_data": { "type": "object" }
       },
-      "required": ["fairId", "name", "category", "institutionId"]
+      "required": ["fairId", "title", "category", "institutionId"]
     },
     "evaluators": {
       "title": "Evaluator",
@@ -106,6 +123,18 @@
         "institutionId": { "type": "string" }
       },
       "required": ["action", "userId", "timestamp", "institutionId"]
+    },
+    "evaluator_applications": {
+      "title": "Evaluator Application",
+      "description": "Application to be an evaluator for a fair",
+      "type": "object",
+      "properties": {
+        "fairId": { "type": "string" },
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pendente", "aprovado", "rejeitado"] },
+        "institutionId": { "type": "string" }
+      },
+      "required": ["fairId", "userId", "status", "institutionId"]
     }
   },
   "firestore": {
@@ -114,6 +143,7 @@
     "/projects/{projectId}": { "schema": "projects", "description": "Project submissions" },
     "/evaluators/{evaluatorId}": { "schema": "evaluators", "description": "Evaluator profiles" },
     "/institutions/{institutionId}": { "schema": "institutions", "description": "Institution settings" },
-    "/audit_logs/{logId}": { "schema": "audit_logs", "description": "Audit trail" }
+    "/audit_logs/{logId}": { "schema": "audit_logs", "description": "Audit trail" },
+    "/evaluator_applications/{applicationId}": { "schema": "evaluator_applications", "description": "Evaluator applications" }
   }
 }

@@ -208,9 +208,15 @@ export const fairsService = {
 
 export const projectsService = {
   subscribeToProjects: (callback: (projects: Project[]) => void) => {
+    const mapProject = (p: any): Project => ({
+      ...p,
+      category: p.category || p.custom_data?.category || '',
+      modality: p.modality || p.custom_data?.modality || ''
+    });
+
     supabase.from('projects').select('*').then(({ data, error }) => {
       if (error) handleSupabaseError(error, OperationType.LIST, 'projects');
-      if (data) callback(data as Project[]);
+      if (data) callback(data.map(mapProject));
     });
 
     const subscription = supabase
@@ -218,7 +224,7 @@ export const projectsService = {
       .on('postgres_changes' as any, { event: '*', table: 'projects' }, async () => {
         const { data, error } = await supabase.from('projects').select('*');
         if (error) handleSupabaseError(error, OperationType.LIST, 'projects');
-        if (data) callback(data as Project[]);
+        if (data) callback(data.map(mapProject));
       })
       .subscribe();
 
@@ -239,10 +245,28 @@ export const projectsService = {
 
     const { data: profile } = await supabase.from('users').select('institutionId').eq('uid', userId).maybeSingle();
 
+    // Sanitize data for projects table (move category/modality to custom_data if needed)
+    const { category, modality, fairId, ...rest } = data as any;
+    
+    // We'll prepare the data with category/modality at top level AND in custom_data
+    // This way it works with both old and new schemas
+    // Also handle fairId mapping
+    const sanitizedData: any = {
+      ...rest,
+      fairId: fairId,
+      category: category || '',
+      modality: modality || '',
+      custom_data: {
+        ...(data.custom_data || {}),
+        category,
+        modality
+      }
+    };
+
     const { data: newProject, error } = await supabase
       .from('projects')
       .insert({
-        ...data,
+        ...sanitizedData,
         creatorId: dbUserId,
         institutionId: profile?.institutionId || 'default-inst',
         status: 'submetido'
@@ -250,16 +274,41 @@ export const projectsService = {
       .select()
       .single();
 
+    // If the error is about missing columns, try a more basic insert
+    if (error && (error.message.includes('custom_data') || error.message.includes('category') || error.message.includes('modality') || error.message.includes('fairId'))) {
+      console.warn('supabaseService: Missing columns detected, retrying with basic schema...');
+      const { custom_data, category: c, modality: m, fairId: f, ...basicData } = sanitizedData;
+      const { data: retryProject, error: retryError } = await supabase
+        .from('projects')
+        .insert({
+          ...basicData,
+          fairId: fairId, // Still need this as it's a foreign key
+          creatorId: dbUserId,
+          institutionId: profile?.institutionId || 'default-inst',
+          status: 'submetido'
+        })
+        .select()
+        .single();
+      
+      if (retryError) await handleSupabaseError(retryError, OperationType.CREATE, 'projects');
+      return retryProject as Project;
+    }
+
     if (error) await handleSupabaseError(error, OperationType.CREATE, 'projects');
     
     // Create first version (RF06)
     if (newProject) {
-      await supabase.from('project_versions').insert({
+      const { error: versionError } = await supabase.from('project_versions').insert({
         projectId: newProject.id,
         version_number: 1,
         data: newProject,
-        created_by: user?.id
+        created_by: dbUserId
       });
+      
+      if (versionError) {
+        console.warn('supabaseService: Error creating project version:', versionError);
+      }
+      
       await logAction('SUBMIT_PROJECT', 'projects', newProject.id, null, newProject);
     }
 
@@ -269,29 +318,63 @@ export const projectsService = {
   updateProject: async (id: string, data: Partial<Project>, justification?: string) => {
     const { data: oldProject } = await supabase.from('projects').select('*').eq('id', id).single();
     const { data: { user } } = await supabase.auth.getUser();
+    const dbUserId = user?.id || '00000000-0000-0000-0000-000000000000';
 
     const newVersionNumber = (oldProject?.current_version || 1) + 1;
 
+    // Sanitize data
+    const { category, modality, fairId, ...rest } = data as any;
+    const sanitizedData: any = {
+      ...rest,
+      fairId: fairId !== undefined ? fairId : oldProject?.fairId,
+      category: category !== undefined ? category : oldProject?.category,
+      modality: modality !== undefined ? modality : oldProject?.modality,
+      custom_data: {
+        ...(data.custom_data || oldProject?.custom_data || {}),
+        category: category !== undefined ? category : oldProject?.category,
+        modality: modality !== undefined ? modality : oldProject?.modality
+      },
+      current_version: newVersionNumber
+    };
+
     const { data: updatedProject, error } = await supabase
       .from('projects')
-      .update({
-        ...data,
-        current_version: newVersionNumber
-      })
+      .update(sanitizedData)
       .eq('id', id)
       .select()
       .single();
+
+    // If the error is about missing columns, try a more basic update
+    if (error && (error.message.includes('custom_data') || error.message.includes('category') || error.message.includes('modality') || error.message.includes('fairId'))) {
+      console.warn('supabaseService: Missing columns detected, retrying update with basic schema...');
+      const { custom_data, category: c, modality: m, fairId: f, ...basicData } = sanitizedData;
+      const { data: retryProject, error: retryError } = await supabase
+        .from('projects')
+        .update(basicData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (retryError) await handleSupabaseError(retryError, OperationType.UPDATE, 'projects');
+      if (retryProject) await logAction('UPDATE_PROJECT', 'projects', id, { ...oldProject, justification }, retryProject);
+      return retryProject as Project;
+    }
 
     if (error) await handleSupabaseError(error, OperationType.UPDATE, 'projects');
 
     if (updatedProject) {
       // Create new version (RF06)
-      await supabase.from('project_versions').insert({
+      const { error: versionError } = await supabase.from('project_versions').insert({
         projectId: id,
         version_number: newVersionNumber,
         data: updatedProject,
-        created_by: user?.id
+        created_by: dbUserId
       });
+
+      if (versionError) {
+        console.warn('supabaseService: Error creating project version update:', versionError);
+      }
+
       await logAction('UPDATE_PROJECT', 'projects', id, { ...oldProject, justification }, updatedProject);
     }
 

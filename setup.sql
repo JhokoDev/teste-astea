@@ -65,6 +65,8 @@ create table if not exists public.projects (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   abstract text,
+  category text,
+  modality text,
   status text default 'pendente', -- 'pendente', 'submetido', 'em_avaliacao', 'avaliado'
   fairId uuid references fairs(id) on delete cascade,
   institutionId text references public.institutions(id) default 'default-inst',
@@ -74,11 +76,60 @@ create table if not exists public.projects (
     "files": [],
     "links": []
   }'::jsonb,
+  custom_data jsonb default '{}'::jsonb,
   current_version integer default 1,
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- 6. Create Project Versions Table (RF06)
+-- Ensure columns exist if table was created previously
+do $$ 
+begin 
+  if not exists (select 1 from information_schema.columns where table_name='projects' and column_name='category') then
+    alter table public.projects add column category text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='projects' and column_name='modality') then
+    alter table public.projects add column modality text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='projects' and column_name='custom_data') then
+    alter table public.projects add column custom_data jsonb default '{}'::jsonb;
+  end if;
+  -- Robust check for fairId
+  if not exists (select 1 from information_schema.columns where table_name='projects' and column_name='fairId') then
+    if exists (select 1 from information_schema.columns where table_name='projects' and column_name='fairid') then
+      alter table public.projects rename column fairid to "fairId";
+    else
+      alter table public.projects add column "fairId" uuid references fairs(id) on delete cascade;
+    end if;
+  end if;
+  -- Robust check for creatorId
+  if not exists (select 1 from information_schema.columns where table_name='projects' and column_name='creatorId') then
+    if exists (select 1 from information_schema.columns where table_name='projects' and column_name='creatorid') then
+      alter table public.projects rename column creatorid to "creatorId";
+    else
+      alter table public.projects add column "creatorId" uuid references auth.users;
+    end if;
+  end if;
+  -- Robust check for institutionId
+  if not exists (select 1 from information_schema.columns where table_name='projects' and column_name='institutionId') then
+    if exists (select 1 from information_schema.columns where table_name='projects' and column_name='institutionid') then
+      alter table public.projects rename column institutionid to "institutionId";
+    else
+      alter table public.projects add column "institutionId" text references public.institutions(id) default 'default-inst';
+    end if;
+  end if;
+end $$;
+
+-- 6. Create Evaluator Applications Table
+create table if not exists public.evaluator_applications (
+  id uuid default gen_random_uuid() primary key,
+  fairId uuid references fairs(id) on delete cascade,
+  userId uuid references auth.users,
+  institutionId text references public.institutions(id) default 'default-inst',
+  status text default 'pendente', -- 'pendente', 'aprovado', 'rejeitado'
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- 7. Create Project Versions Table (RF06)
 create table if not exists public.project_versions (
   id uuid default gen_random_uuid() primary key,
   projectId uuid references projects(id) on delete cascade,
@@ -137,6 +188,8 @@ alter table public.evaluations enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.certificates enable row level security;
 
+alter table public.evaluator_applications enable row level security;
+
 -- 11. Create Silo Policies (RF15)
 -- Users can only see data from their own institution
 
@@ -166,6 +219,21 @@ create policy "Fairs development policy" on public.fairs
 drop policy if exists "Projects isolation" on public.projects;
 drop policy if exists "Projects development policy" on public.projects;
 create policy "Projects development policy" on public.projects
+  for all using (true) with check (true);
+
+-- Evaluator Applications: See own or all for admins
+drop policy if exists "Evaluator applications isolation" on public.evaluator_applications;
+create policy "Evaluator applications isolation" on public.evaluator_applications
+  for all using (true) with check (true);
+
+-- Project Versions: See all for development
+drop policy if exists "Project versions isolation" on public.project_versions;
+create policy "Project versions isolation" on public.project_versions
+  for all using (true) with check (true);
+
+-- Certificates: See own or all for admins
+drop policy if exists "Certificates isolation" on public.certificates;
+create policy "Certificates isolation" on public.certificates
   for all using (true) with check (true);
 
 -- Evaluations: Only evaluators or admins in same institution

@@ -14,6 +14,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [fairs, setFairs] = useState<Fair[]>([]);
+  const [allFairs, setAllFairs] = useState<Fair[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
@@ -32,7 +33,8 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     evidence: {
       files: [],
       links: []
-    }
+    },
+    custom_data: {}
   });
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     
     const unsubscribeFairs = fairsService.subscribeToFairs((data) => {
       console.log('Fairs received in ProjectsView:', data);
+      setAllFairs(data);
       const now = new Date();
       
       // Filter fairs for the submission form
@@ -122,10 +125,13 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         modality: '',
         fairId: '',
         members: [],
-        evidence: { files: [], links: [] }
+        evidence: { files: [], links: [] },
+        custom_data: {}
       });
-    } catch (error) {
-      toast.error('Erro ao submeter projeto.');
+    } catch (error: any) {
+      console.error('Error submitting project:', error);
+      const errorMessage = error?.message || 'Erro desconhecido';
+      toast.error(`Erro ao submeter projeto: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -213,6 +219,80 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                 ))}
               </select>
             </div>
+
+            {/* Custom Form Fields */}
+            {formData.fairId && fairs.find(f => f.id === formData.fairId)?.structure?.custom_form?.map(field => (
+              <div key={field.id} className="space-y-1 md:col-span-2">
+                <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                
+                {field.type === 'textarea' ? (
+                  <textarea 
+                    value={formData.custom_data?.[field.id] || ''}
+                    onChange={e => setFormData({
+                      ...formData, 
+                      custom_data: { ...formData.custom_data, [field.id]: e.target.value }
+                    })}
+                    required={field.required}
+                    placeholder={field.placeholder}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 h-32 dark:text-app-fg"
+                  />
+                ) : field.type === 'select' ? (
+                  <select 
+                    value={formData.custom_data?.[field.id] || ''}
+                    onChange={e => setFormData({
+                      ...formData, 
+                      custom_data: { ...formData.custom_data, [field.id]: e.target.value }
+                    })}
+                    required={field.required}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                  >
+                    <option value="">Selecione uma opção...</option>
+                    {field.options?.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                ) : field.type === 'checkbox' ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {field.options?.map(opt => (
+                      <label key={opt} className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-app-surface rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-app-surface/80 transition-colors">
+                        <input 
+                          type="checkbox"
+                          checked={(formData.custom_data?.[field.id] || []).includes(opt)}
+                          onChange={e => {
+                            const current = formData.custom_data?.[field.id] || [];
+                            const next = e.target.checked 
+                              ? [...current, opt]
+                              : current.filter((a: string) => a !== opt);
+                            setFormData({
+                              ...formData, 
+                              custom_data: { ...formData.custom_data, [field.id]: next }
+                            });
+                          }}
+                          className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                        />
+                        <span className="text-xs font-medium dark:text-app-fg">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <input 
+                    type={field.type === 'link' ? 'url' : field.type}
+                    value={formData.custom_data?.[field.id] || ''}
+                    onChange={e => setFormData({
+                      ...formData, 
+                      custom_data: { ...formData.custom_data, [field.id]: e.target.value }
+                    })}
+                    required={field.required}
+                    placeholder={field.placeholder}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                  />
+                )}
+                {field.helpText && <p className="text-[10px] text-slate-400 dark:text-app-muted italic">{field.helpText}</p>}
+              </div>
+            ))}
           </div>
 
           <div className="pt-6 flex justify-end gap-4">
@@ -238,6 +318,8 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   }
 
   if (selectedProject) {
+    const projectFair = allFairs.find(f => f.id === selectedProject.fairId);
+
     return (
       <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
         <div className="flex items-center gap-4">
@@ -261,6 +343,45 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                 {selectedProject.abstract || "Nenhum resumo fornecido."}
               </p>
             </div>
+
+            {/* Custom Data Display */}
+            {projectFair?.structure?.custom_form && projectFair.structure.custom_form.length > 0 && (
+              <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
+                <h3 className="text-lg font-bold flex items-center gap-2 dark:text-app-fg">
+                  <AlertCircle className="w-5 h-5 text-primary" />
+                  Informações Adicionais
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {projectFair.structure.custom_form.map(field => {
+                    const value = selectedProject.custom_data?.[field.id];
+                    if (value === undefined || value === null || value === '') return null;
+
+                    return (
+                      <div key={field.id} className="space-y-1">
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-app-muted uppercase">{field.label}</p>
+                        <div className="text-sm text-slate-700 dark:text-app-fg bg-slate-50 dark:bg-app-surface p-3 rounded-xl">
+                          {Array.isArray(value) ? (
+                            <div className="flex flex-wrap gap-1">
+                              {value.map((v, i) => (
+                                <span key={i} className="px-2 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium">
+                                  {v}
+                                </span>
+                              ))}
+                            </div>
+                          ) : field.type === 'link' ? (
+                            <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                              {value} <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ) : (
+                            value
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 lg:p-6 space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2 dark:text-app-fg">

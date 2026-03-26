@@ -24,6 +24,16 @@ export interface Institution {
   };
 }
 
+export interface FormField {
+  id: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number' | 'select' | 'checkbox' | 'date' | 'file' | 'link';
+  required: boolean;
+  options?: string[];
+  placeholder?: string;
+  helpText?: string;
+}
+
 export interface Fair {
   id: string;
   name: string;
@@ -43,6 +53,7 @@ export interface Fair {
     modalities: string[];
     target_audience?: string[];
     location_type?: string;
+    custom_form?: FormField[];
   };
   rules: {
     blind_evaluation: boolean;
@@ -78,6 +89,7 @@ export interface Project {
     files: EvidenceFile[];
     links: EvidenceLink[];
   };
+  custom_data?: Record<string, any>;
   current_version: number;
   created_at: string;
 }
