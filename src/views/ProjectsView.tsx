@@ -16,6 +16,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [versions, setVersions] = useState<any[]>([]);
 
   const userRole = profile?.role || 'student';
   const userId = profile?.uid;
@@ -89,6 +90,14 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
       unsubscribeFairs();
     };
   }, [userRole, userId, profile?.email, profile?.institutionId]);
+
+  useEffect(() => {
+    if (selectedProject) {
+      projectsService.getProjectVersions(selectedProject.id).then(setVersions);
+    } else {
+      setVersions([]);
+    }
+  }, [selectedProject]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,14 +268,33 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                 Histórico de Versões (RF06)
               </h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-xl border border-primary bg-primary/5 dark:bg-primary/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span className="text-sm font-bold dark:text-app-fg">v{selectedProject.current_version}</span>
-                    <span className="text-xs text-slate-400 dark:text-app-muted">Atual</span>
+                {versions.length > 0 ? versions.map((v, idx) => (
+                  <div key={v.id} className={cn(
+                    "flex items-center justify-between p-3 rounded-xl border transition-colors",
+                    idx === 0 
+                      ? "border-primary bg-primary/5 dark:bg-primary/10" 
+                      : "border-slate-100 dark:border-app-border bg-slate-50 dark:bg-app-surface"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-2 h-2 rounded-full", idx === 0 ? "bg-primary" : "bg-slate-300")} />
+                      <span className="text-sm font-bold dark:text-app-fg">v{v.version_number}</span>
+                      <span className="text-xs text-slate-400 dark:text-app-muted">
+                        {new Date(v.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                      {idx === 0 && <span className="text-[10px] font-bold text-primary uppercase">Atual</span>}
+                    </div>
+                    <button className="text-xs font-bold text-primary dark:text-primary-light hover:underline">Ver Arquivos</button>
                   </div>
-                  <button className="text-xs font-bold text-primary dark:text-primary-light hover:underline">Ver Arquivos</button>
-                </div>
+                )) : (
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-primary bg-primary/5 dark:bg-primary/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-sm font-bold dark:text-app-fg">v{selectedProject.current_version}</span>
+                      <span className="text-xs text-slate-400 dark:text-app-muted">Atual</span>
+                    </div>
+                    <button className="text-xs font-bold text-primary dark:text-primary-light hover:underline">Ver Arquivos</button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

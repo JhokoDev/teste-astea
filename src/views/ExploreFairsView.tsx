@@ -18,17 +18,59 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
   const [selectedFair, setSelectedFair] = useState<Fair | null>(null);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    const unsubscribe = fairsService.subscribeToFairs((data) => {
-      // Show ALL published fairs for discovery
-      const publishedFairs = data.filter(f => f.status === 'publicado');
-      setFairs(publishedFairs);
-      setLoading(false);
-    });
+    const fetchFairsAndCounts = async () => {
+      const unsubscribe = fairsService.subscribeToFairs(async (data) => {
+        const publishedFairs = data.filter(f => f.status === 'publicado');
+        setFairs(publishedFairs);
 
-    return () => unsubscribe();
+        // Fetch project counts for each published fair
+        const { data: counts, error } = await supabase
+          .from('projects')
+          .select('fairId');
+        
+        if (!error && counts) {
+          const countMap: Record<string, number> = {};
+          counts.forEach(p => {
+            countMap[p.fairId] = (countMap[p.fairId] || 0) + 1;
+          });
+          setProjectCounts(countMap);
+        }
+        
+        setLoading(false);
+      });
+      return unsubscribe;
+    };
+
+    const unsubPromise = fetchFairsAndCounts();
+    return () => {
+      unsubPromise.then(unsub => unsub());
+    };
   }, []);
+
+  const getFairStatus = (fair: Fair) => {
+    const now = new Date();
+    const regStart = fair.dates.registration_start ? new Date(fair.dates.registration_start) : null;
+    const regEnd = fair.dates.registration_end ? new Date(fair.dates.registration_end) : null;
+    const evalStart = fair.dates.evaluation_start ? new Date(fair.dates.evaluation_start) : null;
+    const evalEnd = fair.dates.evaluation_end ? new Date(fair.dates.evaluation_end) : null;
+
+    if (regStart && regEnd && now >= regStart && now <= regEnd) {
+      return { label: 'Inscrições Abertas', color: 'text-primary bg-primary/10' };
+    }
+    if (regEnd && evalStart && now > regEnd && now < evalStart) {
+      return { label: 'Aguardando Avaliação', color: 'text-amber-600 bg-amber-100' };
+    }
+    if (evalStart && evalEnd && now >= evalStart && now <= evalEnd) {
+      return { label: 'Em Avaliação', color: 'text-blue-600 bg-blue-100' };
+    }
+    if (evalEnd && now > evalEnd) {
+      return { label: 'Encerrada', color: 'text-slate-500 bg-slate-100' };
+    }
+    return { label: 'Em Breve', color: 'text-slate-400 bg-slate-50' };
+  };
 
   useEffect(() => {
     const checkApplication = async () => {
@@ -209,8 +251,11 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
               <div className="h-32 bg-primary/5 dark:bg-primary/10 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
                 <Calendar className="w-12 h-12 text-primary/20 dark:text-primary/40" />
-                <div className="absolute top-4 right-4 px-3 py-1 bg-white/80 dark:bg-black/40 backdrop-blur-sm rounded-full text-[10px] font-bold text-primary uppercase">
-                  Inscrições Abertas
+                <div className={cn(
+                  "absolute top-4 right-4 px-3 py-1 backdrop-blur-sm rounded-full text-[10px] font-bold uppercase",
+                  getFairStatus(fair).color
+                )}>
+                  {getFairStatus(fair).label}
                 </div>
               </div>
               <div className="p-6 space-y-4">
@@ -226,24 +271,36 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
                 <div className="flex items-center gap-4 pt-2 border-t border-slate-50 dark:border-app-border">
                   <div className="flex items-center gap-1.5 text-slate-400 dark:text-app-muted">
                     <Users className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase">Aberto a todos</span>
+                    <span className="text-[10px] font-bold uppercase">{fair.structure?.target_audience || 'Público Geral'}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 dark:text-app-muted">
                     <MapPin className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase">Online / Presencial</span>
+                    <span className="text-[10px] font-bold uppercase">{fair.structure?.location_type || 'Híbrido'}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-app-card bg-slate-100 dark:bg-app-surface flex items-center justify-center text-[8px] font-bold text-slate-400 dark:text-app-muted">
-                        {i}
-                      </div>
-                    ))}
-                    <div className="w-6 h-6 rounded-full border-2 border-white dark:border-app-card bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary">
-                      +
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      {[...Array(Math.min(projectCounts[fair.id] || 0, 3))].map((_, i) => (
+                        <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-app-card bg-slate-100 dark:bg-app-surface flex items-center justify-center text-[8px] font-bold text-slate-400 dark:text-app-muted">
+                          {i + 1}
+                        </div>
+                      ))}
+                      {(projectCounts[fair.id] || 0) > 3 && (
+                        <div className="w-6 h-6 rounded-full border-2 border-white dark:border-app-card bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary">
+                          +{(projectCounts[fair.id] || 0) - 3}
+                        </div>
+                      )}
+                      {(projectCounts[fair.id] || 0) === 0 && (
+                        <div className="text-[10px] text-slate-400 dark:text-app-muted font-medium italic">Nenhum projeto ainda</div>
+                      )}
                     </div>
+                    {(projectCounts[fair.id] || 0) > 0 && (
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-app-muted ml-1">
+                        {projectCounts[fair.id]} {projectCounts[fair.id] === 1 ? 'projeto' : 'projetos'}
+                      </span>
+                    )}
                   </div>
                   <span className="text-xs font-bold text-primary flex items-center gap-1">
                     Ver detalhes

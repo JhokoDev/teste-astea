@@ -93,6 +93,10 @@ export const fairsService = {
 
   createFair: async (data: Partial<Fair>) => {
     console.log('supabaseService: createFair called with:', data);
+    
+    // Sanitize data to remove fields that are now in 'structure'
+    const { location_type, target_audience, ...sanitizedData } = data as any;
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     // If no real user, check for mock user in localStorage
@@ -128,7 +132,7 @@ export const fairsService = {
     const { data: newFair, error } = await supabase
       .from('fairs')
       .insert({
-        ...data,
+        ...sanitizedData,
         organizerId: dbUserId,
         institutionId: institutionId
       })
@@ -150,9 +154,12 @@ export const fairsService = {
   updateFair: async (id: string, data: Partial<Fair>) => {
     const { data: oldFair } = await supabase.from('fairs').select('*').eq('id', id).single();
     
+    // Sanitize data to remove fields that are now in 'structure'
+    const { location_type, target_audience, ...sanitizedData } = data as any;
+    
     const { data: updatedFair, error } = await supabase
       .from('fairs')
-      .update(data)
+      .update(sanitizedData)
       .eq('id', id)
       .select()
       .single();
@@ -186,6 +193,16 @@ export const fairsService = {
     if (error) await handleSupabaseError(error, OperationType.CREATE, 'evaluator_applications');
     if (application) await logAction('APPLY_AS_EVALUATOR', 'evaluator_applications', application.id, null, application);
     return application;
+  },
+
+  getEvaluationCriteria: async (fairId: string) => {
+    const { data, error } = await supabase
+      .from('evaluation_criteria')
+      .select('*')
+      .eq('fairId', fairId);
+    
+    if (error) await handleSupabaseError(error, OperationType.LIST, 'evaluation_criteria');
+    return data as EvaluationCriteria[];
   }
 };
 
@@ -279,6 +296,17 @@ export const projectsService = {
     }
 
     return updatedProject as Project;
+  },
+
+  getProjectVersions: async (projectId: string) => {
+    const { data, error } = await supabase
+      .from('project_versions')
+      .select('*')
+      .eq('projectId', projectId)
+      .order('version_number', { ascending: false });
+    
+    if (error) await handleSupabaseError(error, OperationType.LIST, 'project_versions');
+    return data as ProjectVersion[];
   }
 };
 
@@ -306,6 +334,39 @@ export const evaluationsService = {
     if (error) await handleSupabaseError(error, OperationType.CREATE, 'evaluations');
     if (newEval) await logAction('SUBMIT_EVALUATION', 'evaluations', newEval.id, null, newEval);
     return newEval as Evaluation;
+  },
+
+  getEvaluatorStats: async (evaluatorId: string) => {
+    // In a real scenario, we'd have an assignments table. 
+    // For now, we'll count evaluations created by this user.
+    const { data, error } = await supabase
+      .from('evaluations')
+      .select('*')
+      .eq('evaluatorId', evaluatorId);
+    
+    if (error) await handleSupabaseError(error, OperationType.LIST, 'evaluations');
+    
+    const completed = data?.filter(e => e.status === 'finalizado').length || 0;
+    const drafts = data?.filter(e => e.status === 'rascunho').length || 0;
+    
+    // Calculate average score
+    let totalScore = 0;
+    let scoreCount = 0;
+    data?.forEach(e => {
+      if (e.status === 'finalizado') {
+        const scores = Object.values(e.scores) as number[];
+        if (scores.length > 0) {
+          totalScore += scores.reduce((a, b) => a + b, 0) / scores.length;
+          scoreCount++;
+        }
+      }
+    });
+
+    return {
+      completed,
+      drafts,
+      avgScore: scoreCount > 0 ? (totalScore / scoreCount).toFixed(1) : '0.0'
+    };
   }
 };
 

@@ -3,8 +3,8 @@ import { UserSearch, ShieldCheck, ShieldAlert, EyeOff, Eye, UserPlus, CheckCircl
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
-import { evaluationsService, projectsService } from '../services/supabaseService';
-import { Project, Evaluation, UserRole, User } from '../types';
+import { evaluationsService, projectsService, fairsService } from '../services/supabaseService';
+import { Project, Evaluation, UserRole, User, EvaluationCriteria } from '../types';
 import { toast } from 'sonner';
 
 interface EvaluatorsViewProps {
@@ -28,6 +28,9 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [realCriteria, setRealCriteria] = useState<EvaluationCriteria[]>([]);
+  const [evaluatorStats, setEvaluatorStats] = useState({ completed: 0, total: 0 });
+  const [pendingEvaluators, setPendingEvaluators] = useState(0);
 
   // Evaluation Form State
   const [evaluationData, setEvaluationData] = useState<Partial<Evaluation>>({
@@ -68,10 +71,44 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
         // Fetch projects assigned to the current evaluator
         if (profile?.uid) {
-          // In a real app, we'd filter by evaluatorId
-          projectsService.subscribeToProjects((data) => {
-            setAssignedProjects(data.slice(0, 3)); // Mocking assignments
-          });
+          // Get fairs where user is approved evaluator
+          const { data: apps } = await supabase
+            .from('evaluator_applications')
+            .select('fairId')
+            .eq('userId', profile.uid)
+            .eq('status', 'aprovado');
+          
+          const approvedFairIds = apps?.map(a => a.fairId) || [];
+          
+          if (approvedFairIds.length > 0) {
+            const { data: projs } = await supabase
+              .from('projects')
+              .select('*')
+              .in('fairId', approvedFairIds)
+              .neq('creatorId', profile.uid); // Don't evaluate own projects
+            
+            setAssignedProjects(projs || []);
+
+            // Get completed evaluations to calculate progress
+            const { data: evals } = await supabase
+              .from('evaluations')
+              .select('projectId')
+              .eq('evaluatorId', profile.uid)
+              .eq('status', 'finalizado');
+            
+            setEvaluatorStats({
+              completed: evals?.length || 0,
+              total: projs?.length || 0
+            });
+          }
+
+          // Fetch pending applications for the summary
+          let pendingQuery = supabase.from('evaluator_applications').select('id', { count: 'exact' }).eq('status', 'pendente');
+          if (userRole === 'manager' && profile?.institutionId) {
+            pendingQuery = pendingQuery.eq('institutionId', profile.institutionId);
+          }
+          const { count: pendingCount } = await pendingQuery;
+          setPendingEvaluators(pendingCount || 0);
         }
       } catch (error: any) {
         console.error('Error fetching data:', error);
@@ -95,6 +132,23 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
       supabase.removeChannel(subscription);
     };
   }, [userRole, profile?.uid, profile?.institutionId]);
+
+  useEffect(() => {
+    const fetchCriteria = async () => {
+      if (selectedProject) {
+        const criteria = await fairsService.getEvaluationCriteria(selectedProject.fairId);
+        setRealCriteria(criteria);
+        
+        // Reset scores with new criteria
+        const initialScores: Record<string, number> = {};
+        criteria.forEach(c => {
+          initialScores[c.name] = 0;
+        });
+        setEvaluationData(prev => ({ ...prev, scores: initialScores }));
+      }
+    };
+    fetchCriteria();
+  }, [selectedProject]);
 
   const handleUpdateRole = async (userId: string, newRole: UserRole) => {
     try {
@@ -184,26 +238,50 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                   Critérios de Avaliação (RF04)
                 </h3>
                 <div className="grid gap-6">
-                  {['Inovação', 'Metodologia', 'Apresentação', 'Viabilidade'].map(criterion => (
-                    <div key={criterion} className="space-y-3">
+                  {realCriteria.length > 0 ? realCriteria.map(criterion => (
+                    <div key={criterion.id} className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <label className="text-sm font-bold text-slate-700 dark:text-app-fg">{criterion}</label>
-                        <span className="text-sm font-bold text-primary">{evaluationData.scores?.[criterion] || 0}/10</span>
+                        <div>
+                          <label className="text-sm font-bold text-slate-700 dark:text-app-fg">{criterion.name}</label>
+                          {criterion.description && <p className="text-xs text-slate-400 dark:text-app-muted">{criterion.description}</p>}
+                        </div>
+                        <span className="text-sm font-bold text-primary">{evaluationData.scores?.[criterion.name] || 0}/{criterion.max_score}</span>
                       </div>
                       <input 
                         type="range" 
                         min="0" 
-                        max="10" 
-                        step="0.5"
-                        value={evaluationData.scores?.[criterion] || 0}
+                        max={criterion.max_score} 
+                        step={criterion.scale_type === 'numeric' ? "0.5" : "1"}
+                        value={evaluationData.scores?.[criterion.name] || 0}
                         onChange={e => setEvaluationData({
                           ...evaluationData, 
-                          scores: { ...evaluationData.scores, [criterion]: parseFloat(e.target.value) }
+                          scores: { ...evaluationData.scores, [criterion.name]: parseFloat(e.target.value) }
                         })}
                         className="w-full h-2 bg-slate-100 dark:bg-app-surface rounded-lg appearance-none cursor-pointer accent-primary"
                       />
                     </div>
-                  ))}
+                  )) : (
+                    ['Inovação', 'Metodologia', 'Apresentação', 'Viabilidade'].map(criterion => (
+                      <div key={criterion} className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-sm font-bold text-slate-700 dark:text-app-fg">{criterion}</label>
+                          <span className="text-sm font-bold text-primary">{evaluationData.scores?.[criterion] || 0}/10</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="10" 
+                          step="0.5"
+                          value={evaluationData.scores?.[criterion] || 0}
+                          onChange={e => setEvaluationData({
+                            ...evaluationData, 
+                            scores: { ...evaluationData.scores, [criterion]: parseFloat(e.target.value) }
+                          })}
+                          className="w-full h-2 bg-slate-100 dark:bg-app-surface rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -353,7 +431,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-app-surface rounded-xl">
                   <span className="text-sm text-slate-600 dark:text-app-muted">Aguardando Convite</span>
-                  <span className="text-lg font-bold text-slate-400 dark:text-app-muted/50">0</span>
+                  <span className="text-lg font-bold text-amber-600">{pendingEvaluators}</span>
                 </div>
               </div>
             </div>
@@ -427,10 +505,13 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold">
                   <span className="dark:text-app-muted">Concluído</span>
-                  <span className="text-primary">0/3</span>
+                  <span className="text-primary">{evaluatorStats.completed}/{evaluatorStats.total}</span>
                 </div>
                 <div className="h-2 bg-slate-100 dark:bg-app-surface rounded-full overflow-hidden">
-                  <div className="h-full bg-primary" style={{ width: '0%' }} />
+                  <div 
+                    className="h-full bg-primary transition-all duration-500" 
+                    style={{ width: `${evaluatorStats.total > 0 ? (evaluatorStats.completed / evaluatorStats.total) * 100 : 0}%` }} 
+                  />
                 </div>
               </div>
             </div>

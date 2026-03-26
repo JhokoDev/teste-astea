@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
 import { Fair, EvaluationCriteria, User } from '../types';
 import { toast } from 'sonner';
+import { supabase } from '../supabase';
 
 type CreationStep = 'Identidade' | 'Datas' | 'Estrutura' | 'Regras' | 'Revisão';
 
@@ -14,9 +15,14 @@ interface FairsViewProps {
 
 export function FairsView({ profile }: FairsViewProps) {
   const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingFairId, setEditingFairId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<CreationStep>('Identidade');
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [loading, setLoading] = useState(true);
+  const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
+  const [evaluatorCounts, setEvaluatorCounts] = useState<Record<string, number>>({});
+  const [pendingEvaluatorCounts, setPendingEvaluatorCounts] = useState<Record<string, number>>({});
 
   const userRole = profile?.role || 'student';
   const userId = profile?.uid;
@@ -35,7 +41,9 @@ export function FairsView({ profile }: FairsViewProps) {
     },
     structure: {
       categories: [],
-      modalities: []
+      modalities: [],
+      target_audience: 'Aberto a todos',
+      location_type: 'Híbrido'
     },
     rules: {
       blind_evaluation: false,
@@ -47,16 +55,63 @@ export function FairsView({ profile }: FairsViewProps) {
   const [criteria, setCriteria] = useState<Partial<EvaluationCriteria>[]>([]);
 
   useEffect(() => {
-    const unsubscribe = fairsService.subscribeToFairs((data) => {
-      // Filter fairs if manager
-      if (userRole === 'manager') {
-        setFairs(data.filter(f => f.organizerId === userId || f.organizerId === null)); // null for mock/legacy
-      } else if (userRole === 'admin') {
-        setFairs(data);
-      } else {
-        // Other roles might only see published fairs or nothing in this view
-        setFairs(data.filter(f => f.status === 'publicado'));
+    const fetchCounts = async (fairsData: Fair[]) => {
+      const fairIds = fairsData.map(f => f.id);
+      if (fairIds.length === 0) return;
+
+      // Projects count
+      const { data: pCounts } = await supabase
+        .from('projects')
+        .select('fairId');
+      
+      if (pCounts) {
+        const pMap: Record<string, number> = {};
+        pCounts.forEach(p => {
+          pMap[p.fairId] = (pMap[p.fairId] || 0) + 1;
+        });
+        setProjectCounts(pMap);
       }
+
+      // Evaluators count (approved applications)
+      const { data: eCounts } = await supabase
+        .from('evaluator_applications')
+        .select('fairId')
+        .eq('status', 'aprovado');
+      
+      if (eCounts) {
+        const eMap: Record<string, number> = {};
+        eCounts.forEach(e => {
+          eMap[e.fairId] = (eMap[e.fairId] || 0) + 1;
+        });
+        setEvaluatorCounts(eMap);
+      }
+
+      // Pending Evaluators count
+      const { data: peCounts } = await supabase
+        .from('evaluator_applications')
+        .select('fairId')
+        .eq('status', 'pendente');
+      
+      if (peCounts) {
+        const peMap: Record<string, number> = {};
+        peCounts.forEach(pe => {
+          peMap[pe.fairId] = (peMap[pe.fairId] || 0) + 1;
+        });
+        setPendingEvaluatorCounts(peMap);
+      }
+    };
+
+    const unsubscribe = fairsService.subscribeToFairs((data) => {
+      let filtered = data;
+      if (userRole === 'manager') {
+        filtered = data.filter(f => f.organizerId === userId || f.organizerId === null);
+      } else if (userRole === 'admin') {
+        filtered = data;
+      } else {
+        filtered = data.filter(f => f.status === 'publicado');
+      }
+      setFairs(filtered);
+      fetchCounts(filtered);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -116,25 +171,42 @@ export function FairsView({ profile }: FairsViewProps) {
 
     try {
       setLoading(true);
-      console.log('FairsView: Iniciando criação de feira:', formData);
-      const toastId = toast.loading('Criando feira no banco de dados...');
+      if (isEditing && editingFairId) {
+        console.log('FairsView: Iniciando atualização de feira:', formData);
+        const toastId = toast.loading('Atualizando feira no banco de dados...');
+        
+        await fairsService.updateFair(editingFairId, formData);
+        
+        toast.dismiss(toastId);
+        toast.success('Feira atualizada com sucesso!');
+      } else {
+        console.log('FairsView: Iniciando criação de feira:', formData);
+        const toastId = toast.loading('Criando feira no banco de dados...');
+        
+        await fairsService.createFair({
+          ...formData,
+          organizerId: profile?.uid,
+          institutionId: profile?.institutionId
+        });
+        
+        toast.dismiss(toastId);
+        toast.success('Feira criada com sucesso!');
+      }
       
-      const result = await fairsService.createFair({
-        ...formData,
-        organizerId: profile?.uid,
-        institutionId: profile?.institutionId
-      });
-      console.log('FairsView: Resultado da criação:', result);
-      
-      toast.dismiss(toastId);
-      toast.success('Feira criada com sucesso!');
       setIsCreating(false);
+      setIsEditing(false);
+      setEditingFairId(null);
       setFormData({
         name: '',
         description: '',
         status: 'rascunho',
         dates: { registration_start: '', registration_end: '', evaluation_start: '', evaluation_end: '', results_date: '' },
-        structure: { categories: [], modalities: [] },
+        structure: { 
+          categories: [], 
+          modalities: [],
+          target_audience: 'Aberto a todos',
+          location_type: 'Híbrido'
+        },
         rules: { blind_evaluation: false, min_evaluators_per_project: 3, tie_breaker_hierarchy: [] }
       });
     } catch (error: any) {
@@ -174,14 +246,39 @@ export function FairsView({ profile }: FairsViewProps) {
     }));
   };
 
+  const handleEdit = (fair: Fair) => {
+    setFormData({
+      name: fair.name,
+      description: fair.description,
+      status: fair.status,
+      dates: fair.dates,
+      structure: {
+        ...fair.structure,
+        target_audience: fair.structure?.target_audience || 'Aberto a todos',
+        location_type: fair.structure?.location_type || 'Híbrido'
+      },
+      rules: fair.rules
+    });
+    setEditingFairId(fair.id);
+    setIsEditing(true);
+    setIsCreating(true);
+    setCurrentStep('Identidade');
+  };
+
   if (isCreating) {
     return (
       <div className="p-4 lg:p-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
         <div className="flex items-center gap-4 mb-6 lg:mb-8">
-          <button onClick={() => setIsCreating(false)} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
+          <button onClick={() => {
+            setIsCreating(false);
+            setIsEditing(false);
+            setEditingFairId(null);
+          }} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Configurar Nova Feira</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">
+            {isEditing ? 'Editar Feira' : 'Configurar Nova Feira'}
+          </h2>
         </div>
 
         {/* Stepper */}
@@ -230,6 +327,34 @@ export function FairsView({ profile }: FairsViewProps) {
                     className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 h-32 dark:text-app-fg" 
                     placeholder="Descreva os objetivos da feira..." 
                   />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Público-Alvo</label>
+                    <select 
+                      value={formData.structure?.target_audience}
+                      onChange={e => setFormData({...formData, structure: {...formData.structure!, target_audience: e.target.value}})}
+                      className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                    >
+                      <option value="Aberto a todos">Aberto a todos</option>
+                      <option value="Ensino Fundamental">Ensino Fundamental</option>
+                      <option value="Ensino Médio">Ensino Médio</option>
+                      <option value="Ensino Técnico">Ensino Técnico</option>
+                      <option value="Ensino Superior">Ensino Superior</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Modalidade de Local</label>
+                    <select 
+                      value={formData.structure?.location_type}
+                      onChange={e => setFormData({...formData, structure: {...formData.structure!, location_type: e.target.value}})}
+                      className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                    >
+                      <option value="Híbrido">Híbrido</option>
+                      <option value="Presencial">Presencial</option>
+                      <option value="Online">Online</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -426,6 +551,10 @@ export function FairsView({ profile }: FairsViewProps) {
                     <p className="font-bold text-amber-600 dark:text-amber-400 uppercase">{formData.status}</p>
                   </div>
                   <div className="col-span-2">
+                    <p className="text-xs font-bold text-slate-400 dark:text-app-muted/60 uppercase">Público e Local</p>
+                    <p className="font-bold dark:text-app-fg">{formData.structure?.target_audience} | {formData.structure?.location_type}</p>
+                  </div>
+                  <div className="col-span-2">
                     <p className="text-xs font-bold text-slate-400 dark:text-app-muted/60 uppercase">Categorias</p>
                     <p className="font-bold dark:text-app-fg">{formData.structure?.categories.join(', ') || 'Nenhuma'}</p>
                   </div>
@@ -509,15 +638,23 @@ export function FairsView({ profile }: FairsViewProps) {
               </div>
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="text-center p-2 bg-slate-50 dark:bg-app-surface rounded-xl">
-                  <p className="text-lg font-bold text-slate-900 dark:text-app-fg">0</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-app-fg">{projectCounts[fair.id] || 0}</p>
                   <p className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-bold">Projetos</p>
                 </div>
                 <div className="text-center p-2 bg-slate-50 dark:bg-app-surface rounded-xl">
-                  <p className="text-lg font-bold text-slate-900 dark:text-app-fg">0</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-app-fg">{evaluatorCounts[fair.id] || 0}</p>
                   <p className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-bold">Juízes</p>
                 </div>
                 <div className="text-center p-2 bg-slate-50 dark:bg-app-surface rounded-xl">
-                  <p className="text-lg font-bold text-slate-900 dark:text-app-fg">-</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-app-fg">
+                    {(() => {
+                      const end = fair.dates.registration_end ? new Date(fair.dates.registration_end) : null;
+                      if (!end) return '-';
+                      const diff = end.getTime() - new Date().getTime();
+                      const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                      return days > 0 ? `${days}d` : 'Fim';
+                    })()}
+                  </p>
                   <p className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-bold">Restante</p>
                 </div>
               </div>
@@ -579,7 +716,11 @@ export function FairsView({ profile }: FairsViewProps) {
                     Feira Encerrada
                   </div>
                 )}
-                <button className="px-3 py-2 rounded-xl border border-slate-100 dark:border-app-border text-slate-400 dark:text-app-muted hover:text-slate-600 dark:hover:text-app-fg transition-colors">
+                <button 
+                  onClick={() => handleEdit(fair)}
+                  className="px-3 py-2 rounded-xl border border-slate-100 dark:border-app-border text-slate-400 dark:text-app-muted hover:text-primary dark:hover:text-primary-light transition-colors"
+                  title="Editar Feira"
+                >
                   <Layout className="w-4 h-4" />
                 </button>
               </div>

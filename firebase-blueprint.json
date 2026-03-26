@@ -32,6 +32,15 @@
             "evaluationStart": { "type": "string", "format": "date-time" },
             "resultsDate": { "type": "string", "format": "date-time" }
           }
+        },
+        "structure": {
+          "type": "object",
+          "properties": {
+            "categories": { "type": "array", "items": { "type": "string" } },
+            "modalities": { "type": "array", "items": { "type": "string" } },
+            "target_audience": { "type": "string" },
+            "location_type": { "type": "string" }
+          }
         }
       },
       "required": ["name", "status", "organizerId", "institutionId"]

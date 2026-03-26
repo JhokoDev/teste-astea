@@ -5,7 +5,7 @@ import { ProjectTable } from '../components/ProjectTable';
 import { AlertsPanel } from '../components/AlertsPanel';
 import { motion } from 'motion/react';
 import { Loader2 } from 'lucide-react';
-import { projectsService, fairsService, usersService } from '../services/supabaseService';
+import { projectsService, fairsService, usersService, evaluationsService } from '../services/supabaseService';
 import { Project, Fair, KPI, Stage, Alert, UserRole } from '../types';
 
 interface DashboardViewProps {
@@ -18,6 +18,7 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [evaluatorStats, setEvaluatorStats] = useState({ completed: 0, drafts: 0, avgScore: '0.0' });
 
   useEffect(() => {
     const unsubProjects = projectsService.subscribeToProjects((data) => {
@@ -41,6 +42,9 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
 
     const unsubUsers = usersService.subscribeToUsers((data) => {
       setUsers(data);
+      if (userRole === 'evaluator' && userId) {
+        evaluationsService.getEvaluatorStats(userId).then(setEvaluatorStats);
+      }
       setLoading(false);
     });
 
@@ -64,19 +68,25 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
 
     if (userRole === 'evaluator') {
       return [
-        { label: 'Projetos Atribuídos', value: '12', icon: 'FileText' }, // Mock for now
-        { label: 'Avaliações Pendentes', value: '5', icon: 'Clock', status: 'Atenção' },
-        { label: 'Avaliações Concluídas', value: '7', icon: 'CheckCircle', status: 'Normal' },
-        { label: 'Média de Notas', value: '8.5', icon: 'Star' }
+        { label: 'Projetos Avaliados', value: evaluatorStats.completed.toString(), icon: 'FileText' },
+        { label: 'Avaliações Pendentes', value: evaluatorStats.drafts.toString(), icon: 'Clock', status: 'Atenção' },
+        { label: 'Taxa de Conclusão', value: (evaluatorStats.completed + evaluatorStats.drafts) > 0 ? `${Math.round((evaluatorStats.completed / (evaluatorStats.completed + evaluatorStats.drafts)) * 100)}%` : '100%', icon: 'CheckCircle', status: 'Normal' },
+        { label: 'Média de Notas', value: evaluatorStats.avgScore, icon: 'Star' }
       ];
     }
 
     // Student / Advisor
+    const nextDeadline = fairs
+      .filter(f => f.status === 'publicado' && f.dates.registration_end)
+      .map(f => new Date(f.dates.registration_end!))
+      .filter(d => d > new Date())
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+
     return [
       { label: 'Meus Projetos', value: filteredProjects.length.toString(), icon: 'FileText' },
       { label: 'Projetos Aprovados', value: filteredProjects.filter(p => p.status === 'aprovado').length.toString(), icon: 'CheckCircle', status: 'Normal' },
       { label: 'Em Avaliação', value: filteredProjects.filter(p => p.status === 'em_avaliacao').length.toString(), icon: 'Clock' },
-      { label: 'Próximo Prazo', value: '15/04', icon: 'Calendar', status: 'Atenção' }
+      { label: 'Próximo Prazo', value: nextDeadline ? nextDeadline.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '--/--', icon: 'Calendar', status: 'Atenção' }
     ];
   };
 
@@ -93,9 +103,8 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
 
     if (userRole === 'evaluator') {
       return [
-        { id: 1, label: 'Atribuídos', count: '12', status: 'completed' },
-        { id: 2, label: 'Em Avaliação', count: '5', status: 'active' },
-        { id: 3, label: 'Concluídos', count: '7', status: 'pending' }
+        { id: 1, label: 'Pendentes', count: evaluatorStats.drafts.toString(), status: 'active' },
+        { id: 2, label: 'Concluídos', count: evaluatorStats.completed.toString(), status: 'completed' }
       ];
     }
 
@@ -123,13 +132,24 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
         alerts.push({ id: '3', title: 'Sem Avaliadores', description: 'Existem projetos submetidos mas nenhum avaliador cadastrado no sistema.', type: 'error' });
       }
     } else if (userRole === 'evaluator') {
-      alerts.push({ id: 'e1', title: 'Prazo de Avaliação', description: 'Você tem 5 projetos com prazo de avaliação vencendo em 48h.', type: 'warning' });
+      if (evaluatorStats.drafts > 0) {
+        alerts.push({ id: 'e1', title: 'Avaliações Pendentes', description: `Você possui ${evaluatorStats.drafts} avaliações em rascunho que precisam ser finalizadas.`, type: 'warning' });
+      }
     } else {
       const rejectedProjects = filteredProjects.filter(p => p.status === 'rejeitado');
       if (rejectedProjects.length > 0) {
         alerts.push({ id: 's1', title: 'Projeto Rejeitado', description: 'Um de seus projetos foi rejeitado. Verifique o feedback para ajustes.', type: 'error' });
       }
-      alerts.push({ id: 's2', title: 'Submissão Aberta', description: 'A Feira de Ciências 2024 está aceitando submissões até 30/04.', type: 'info' });
+      
+      const openFairs = fairs.filter(f => {
+        if (f.status !== 'publicado' || !f.dates.registration_start || !f.dates.registration_end) return false;
+        const now = new Date();
+        return now >= new Date(f.dates.registration_start) && now <= new Date(f.dates.registration_end);
+      });
+
+      if (openFairs.length > 0) {
+        alerts.push({ id: 's2', title: 'Submissão Aberta', description: `${openFairs[0].name} está aceitando submissões.`, type: 'info' });
+      }
     }
 
     return alerts;

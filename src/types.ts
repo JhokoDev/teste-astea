@@ -9,6 +9,10 @@ export interface User {
   photoURL: string | null;
   role: UserRole;
   institutionId: string;
+  settings?: {
+    emailNotifications: boolean;
+    deadlineAlerts: boolean;
+  };
 }
 
 export interface Institution {
@@ -37,6 +41,8 @@ export interface Fair {
   structure: {
     categories: string[];
     modalities: string[];
+    target_audience?: string;
+    location_type?: string;
   };
   rules: {
     blind_evaluation: boolean;
