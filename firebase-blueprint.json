@@ -38,7 +38,7 @@
           "properties": {
             "categories": { "type": "array", "items": { "type": "string" } },
             "modalities": { "type": "array", "items": { "type": "string" } },
-            "target_audience": { "type": "string" },
+            "target_audience": { "type": "array", "items": { "type": "string" } },
             "location_type": { "type": "string" }
           }
         }

@@ -41,7 +41,7 @@ export interface Fair {
   structure: {
     categories: string[];
     modalities: string[];
-    target_audience?: string;
+    target_audience?: string[];
     location_type?: string;
   };
   rules: {

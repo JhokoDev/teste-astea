@@ -271,7 +271,11 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
                 <div className="flex items-center gap-4 pt-2 border-t border-slate-50 dark:border-app-border">
                   <div className="flex items-center gap-1.5 text-slate-400 dark:text-app-muted">
                     <Users className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase">{fair.structure?.target_audience || 'Público Geral'}</span>
+                    <span className="text-[10px] font-bold uppercase">
+                      {Array.isArray(fair.structure?.target_audience) 
+                        ? (fair.structure.target_audience.length > 0 ? fair.structure.target_audience.join(', ') : 'Público Geral')
+                        : (fair.structure?.target_audience || 'Público Geral')}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 dark:text-app-muted">
                     <MapPin className="w-4 h-4" />

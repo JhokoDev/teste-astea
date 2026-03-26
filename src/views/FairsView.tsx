@@ -42,7 +42,7 @@ export function FairsView({ profile }: FairsViewProps) {
     structure: {
       categories: [],
       modalities: [],
-      target_audience: 'Aberto a todos',
+      target_audience: [],
       location_type: 'Híbrido'
     },
     rules: {
@@ -204,7 +204,7 @@ export function FairsView({ profile }: FairsViewProps) {
         structure: { 
           categories: [], 
           modalities: [],
-          target_audience: 'Aberto a todos',
+          target_audience: [],
           location_type: 'Híbrido'
         },
         rules: { blind_evaluation: false, min_evaluators_per_project: 3, tie_breaker_hierarchy: [] }
@@ -254,7 +254,7 @@ export function FairsView({ profile }: FairsViewProps) {
       dates: fair.dates,
       structure: {
         ...fair.structure,
-        target_audience: fair.structure?.target_audience || 'Aberto a todos',
+        target_audience: Array.isArray(fair.structure?.target_audience) ? fair.structure.target_audience : [],
         location_type: fair.structure?.location_type || 'Híbrido'
       },
       rules: fair.rules
@@ -328,20 +328,45 @@ export function FairsView({ profile }: FairsViewProps) {
                     placeholder="Descreva os objetivos da feira..." 
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Público-Alvo</label>
-                    <select 
-                      value={formData.structure?.target_audience}
-                      onChange={e => setFormData({...formData, structure: {...formData.structure!, target_audience: e.target.value}})}
-                      className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
-                    >
-                      <option value="Aberto a todos">Aberto a todos</option>
-                      <option value="Ensino Fundamental">Ensino Fundamental</option>
-                      <option value="Ensino Médio">Ensino Médio</option>
-                      <option value="Ensino Técnico">Ensino Técnico</option>
-                      <option value="Ensino Superior">Ensino Superior</option>
-                    </select>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {(() => {
+                        const audiences = ['Ensino Fundamental', 'Ensino Médio', 'Ensino Técnico', 'Ensino Superior', 'Aberto a todos'];
+                        const selectAllOption = 'Aberto a todos';
+                        const otherOptions = audiences.filter(a => a !== selectAllOption);
+                        
+                        return audiences.map(audience => (
+                          <label key={audience} className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-app-surface rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-app-surface/80 transition-colors">
+                            <input 
+                              type="checkbox"
+                              checked={formData.structure?.target_audience?.includes(audience)}
+                              onChange={e => {
+                                const isChecked = e.target.checked;
+                                const current = formData.structure?.target_audience || [];
+                                let next: string[] = [];
+
+                                if (audience === selectAllOption) {
+                                  next = isChecked ? [...audiences] : [];
+                                } else {
+                                  if (isChecked) {
+                                    const tempNext = [...current, audience];
+                                    const allOthersChecked = otherOptions.every(opt => tempNext.includes(opt));
+                                    next = allOthersChecked ? [...audiences] : tempNext;
+                                  } else {
+                                    next = current.filter(a => a !== audience && a !== selectAllOption);
+                                  }
+                                }
+                                setFormData({...formData, structure: {...formData.structure!, target_audience: next}});
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                            />
+                            <span className="text-xs font-medium dark:text-app-fg">{audience}</span>
+                          </label>
+                        ));
+                      })()}
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Modalidade de Local</label>
@@ -552,7 +577,9 @@ export function FairsView({ profile }: FairsViewProps) {
                   </div>
                   <div className="col-span-2">
                     <p className="text-xs font-bold text-slate-400 dark:text-app-muted/60 uppercase">Público e Local</p>
-                    <p className="font-bold dark:text-app-fg">{formData.structure?.target_audience} | {formData.structure?.location_type}</p>
+                    <p className="font-bold dark:text-app-fg">
+                      {Array.isArray(formData.structure?.target_audience) ? formData.structure.target_audience.join(', ') : 'Nenhum'} | {formData.structure?.location_type}
+                    </p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-xs font-bold text-slate-400 dark:text-app-muted/60 uppercase">Categorias</p>
