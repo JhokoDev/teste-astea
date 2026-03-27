@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Lock, History, Database, Users, Bell, Globe, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { settingsService, usersService } from '../services/supabaseService';
 import { supabase } from '../supabase';
 import { cn } from '../lib/utils';
 
@@ -13,20 +14,10 @@ export function SettingsView() {
     const fetchSettingsAndLogs = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Fetch user profile to get institutionId
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('institutionId')
-          .eq('uid', user.id)
-          .single();
+        const { data: userProfile } = await usersService.getProfile(user.id);
 
         if (userProfile) {
-          // Fetch institution settings
-          const { data: instData } = await supabase
-            .from('institutions')
-            .select('settings')
-            .eq('id', userProfile.institutionId)
-            .single();
+          const { data: instData } = await settingsService.getInstitutionSettings(userProfile.institution_id);
           
           if (instData) {
             setSettings(instData.settings || {});
@@ -34,12 +25,7 @@ export function SettingsView() {
         }
       }
 
-      // Fetch audit logs
-      const { data: logsData } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(5);
+      const { data: logsData } = await settingsService.getAuditLogs(5);
       
       if (logsData) {
         setLogs(logsData);
@@ -47,22 +33,16 @@ export function SettingsView() {
       setLoading(false);
     };
 
-    // Real-time subscription for logs
-    const subscription = supabase
-      .channel('audit_logs_changes')
-      .on('postgres_changes' as any, { event: 'INSERT', table: 'audit_logs' }, async () => {
-        const { data } = await supabase
-          .from('audit_logs')
-          .select('*')
-          .order('timestamp', { ascending: false })
-          .limit(5);
+    const unsubscribe = settingsService.subscribeToAuditLogs(async (event) => {
+      if (event.type === 'INSERT') {
+        const { data } = await settingsService.getAuditLogs(5);
         if (data) setLogs(data);
-      })
-      .subscribe();
+      }
+    });
 
     fetchSettingsAndLogs();
     return () => {
-      supabase.removeChannel(subscription);
+      unsubscribe();
     };
   }, []);
 
@@ -73,17 +53,10 @@ export function SettingsView() {
     const newSettings = { ...settings, [key]: !settings[key] };
     setSettings(newSettings);
 
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('institutionId')
-      .eq('uid', user.id)
-      .single();
+    const { data: userProfile } = await usersService.getProfile(user.id);
 
     if (userProfile) {
-      await supabase
-        .from('institutions')
-        .update({ settings: newSettings })
-        .eq('id', userProfile.institutionId);
+      await settingsService.updateInstitutionSettings(userProfile.institution_id, newSettings);
     }
   };
 
@@ -165,7 +138,7 @@ export function SettingsView() {
                   <div className="w-2 h-2 rounded-full bg-primary/40 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{log.action}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-app-muted">Por {log.userName} em {log.target}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-app-muted">Por {log.user_name} em {log.target}</p>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold text-slate-300 dark:text-app-muted/40 uppercase">

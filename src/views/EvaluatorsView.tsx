@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { UserSearch, ShieldCheck, ShieldAlert, EyeOff, Eye, UserPlus, CheckCircle2, AlertCircle, Loader2, Star, MessageSquare, Trash2, Shield, User as UserIcon } from 'lucide-react';
+import { 
+  UserSearch, 
+  ShieldCheck, 
+  ShieldAlert, 
+  EyeOff, 
+  Eye, 
+  UserPlus, 
+  CheckCircle2, 
+  AlertCircle, 
+  Loader2, 
+  Star, 
+  MessageSquare, 
+  Trash2, 
+  Shield, 
+  User as UserIcon,
+  Maximize2
+} from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { EvaluatorSkeleton } from '../components/Skeleton';
 import { supabase } from '../supabase';
-import { evaluationsService, projectsService, fairsService } from '../services/supabaseService';
+import { usersService, evaluationsService, projectsService, fairsService } from '../services/supabaseService';
 import { Project, Evaluation, UserRole, User, EvaluationCriteria } from '../types';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 
 interface EvaluatorsViewProps {
   profile?: User | null;
@@ -22,6 +40,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
   const userRole = profile?.role || 'student';
   const [isBlindMode, setIsBlindMode] = useState(true);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [evaluators, setEvaluators] = useState<any[]>([]);
   const [assignedProjects, setAssignedProjects] = useState<Project[]>([]);
@@ -35,6 +54,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
   // Evaluation Form State
   const [evaluationData, setEvaluationData] = useState<Partial<Evaluation>>({
     scores: {},
+    criterion_feedback: {},
     feedback: '',
     is_conflict_declared: false
   });
@@ -44,90 +64,45 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
       setLoading(true);
       try {
         if (userRole === 'admin') {
-          // Admins see everyone
-          const { data: users, error } = await supabase.from('users').select('*').order('displayName');
+          const { data: users, error } = await usersService.getUsers({});
           if (error) throw error;
           setAllUsers(users || []);
-        } else if (userRole === 'manager' && profile?.institutionId) {
-          // Managers strictly see users from their own institution
-          const { data: users, error: usersError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('institutionId', profile.institutionId)
-            .order('displayName');
-          
-          if (usersError) throw usersError;
+        } else if (userRole === 'manager' && profile?.institution_id) {
+          const { data: users, error } = await usersService.getUsers({ institution_id: profile.institution_id });
+          if (error) throw error;
           setAllUsers(users || []);
         }
 
-        // Fetch evaluators for the summary/list (filtered by institution for managers)
-        let evalsQuery = supabase.from('users').select('*').eq('role', 'evaluator');
-        if (userRole === 'manager' && profile?.institutionId) {
-          evalsQuery = evalsQuery.eq('institutionId', profile.institutionId);
-        }
-        const { data: evals, error: evalsError } = await evalsQuery;
+        // Fetch evaluators
+        const { data: evals, error: evalsError } = await usersService.getUsers({ 
+          role: 'evaluator',
+          ...(userRole === 'manager' ? { institution_id: profile?.institution_id } : {})
+        });
         if (evalsError) throw evalsError;
         setEvaluators(evals || []);
 
         // Fetch projects assigned to the current evaluator
         if (profile?.uid) {
-          const isMockId = profile.uid.startsWith('00000000') || 
-                           profile.uid.startsWith('11111111') || 
-                           profile.uid.startsWith('22222222') || 
-                           profile.uid === 'dev-admin-id';
+          const { data: projs, error: projsError } = await evaluationsService.getAssignedProjects(profile.uid);
+          if (projsError) throw projsError;
+          setAssignedProjects(projs || []);
 
-          // Get fairs where user is approved evaluator
-          let appsQuery = supabase
-            .from('evaluator_applications')
-            .select('fairId')
-            .eq('status', 'aprovado');
-          
-          if (isMockId) {
-            appsQuery = appsQuery.is('userId', null);
-          } else {
-            appsQuery = appsQuery.eq('userId', profile.uid);
-          }
-
-          const { data: apps } = await appsQuery;
-          
-          const approvedFairIds = apps?.map(a => a.fairId) || [];
-          
-          if (approvedFairIds.length > 0) {
-            const { data: projs } = await supabase
-              .from('projects')
-              .select('*')
-              .in('fairId', approvedFairIds)
-              .neq('creatorId', profile.uid); // Don't evaluate own projects
-            
-            setAssignedProjects(projs || []);
-
-            // Get completed evaluations to calculate progress
-            let evalsQuery = supabase
-              .from('evaluations')
-              .select('projectId')
-              .eq('status', 'finalizado');
-            
-            if (isMockId) {
-              evalsQuery = evalsQuery.is('evaluatorId', null);
-            } else {
-              evalsQuery = evalsQuery.eq('evaluatorId', profile.uid);
-            }
-
-            const { data: evals } = await evalsQuery;
-            
+          const { data: stats, error: statsError } = await evaluationsService.getEvaluatorStats(profile.uid);
+          if (statsError) throw statsError;
+          if (stats) {
             setEvaluatorStats({
-              completed: evals?.length || 0,
+              completed: stats.completed,
               total: projs?.length || 0
             });
           }
 
-          // Fetch pending applications for the summary
-          let pendingQuery = supabase.from('evaluator_applications').select('id', { count: 'exact' }).eq('status', 'pendente');
-          if (userRole === 'manager' && profile?.institutionId) {
-            pendingQuery = pendingQuery.eq('institutionId', profile.institutionId);
-          }
-          const { count: pendingCount } = await pendingQuery;
-          setPendingEvaluators(pendingCount || 0);
+          // Fetch pending applications
+          const { data: pending, error: pendingError } = await evaluationsService.getEvaluatorApplications({
+            status: 'pendente',
+            ...(userRole === 'manager' ? { institution_id: profile?.institution_id } : {})
+          });
+          if (pendingError) throw pendingError;
+          setPendingEvaluators(pending?.length || 0);
         }
       } catch (error: any) {
         console.error('Error fetching data:', error);
@@ -140,30 +115,72 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
     fetchData();
 
     // Real-time subscription for users
-    const subscription = supabase
-      .channel('users_management')
-      .on('postgres_changes' as any, { event: '*', table: 'users' }, () => {
-        fetchData(); // Re-fetch with filters
-      })
-      .subscribe();
+    const unsubscribe = usersService.subscribeToUsers((event) => {
+      if (event.type === 'INITIAL') {
+        // We handle initial fetch in fetchData for more complex filtering
+        return;
+      }
+      
+      const filterUser = (u: any) => {
+        if (userRole === 'admin') return true;
+        if (userRole === 'manager') return u.institution_id === profile?.institution_id;
+        return false;
+      };
 
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [userRole, profile?.uid, profile?.institutionId]);
+      if (event.type === 'INSERT') {
+        if (filterUser(event.newItem)) {
+          setAllUsers(prev => [...prev, event.newItem]);
+          if (event.newItem.role === 'evaluator') {
+            setEvaluators(prev => [...prev, event.newItem]);
+          }
+        }
+      } else if (event.type === 'UPDATE') {
+        if (filterUser(event.newItem)) {
+          setAllUsers(prev => prev.map(u => u.uid === event.newItem.uid ? event.newItem : u));
+          
+          // Update evaluators list
+          if (event.newItem.role === 'evaluator') {
+            setEvaluators(prev => {
+              const exists = prev.some(u => u.uid === event.newItem.uid);
+              if (exists) return prev.map(u => u.uid === event.newItem.uid ? event.newItem : u);
+              return [...prev, event.newItem];
+            });
+          } else {
+            setEvaluators(prev => prev.filter(u => u.uid !== event.newItem.uid));
+          }
+        } else {
+          setAllUsers(prev => prev.filter(u => u.uid !== event.newItem.uid));
+          setEvaluators(prev => prev.filter(u => u.uid !== event.newItem.uid));
+        }
+      } else if (event.type === 'DELETE') {
+        setAllUsers(prev => prev.filter(u => u.uid !== event.oldItem.uid));
+        setEvaluators(prev => prev.filter(u => u.uid !== event.oldItem.uid));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userRole, profile?.uid, profile?.institution_id]);
 
   useEffect(() => {
     const fetchCriteria = async () => {
       if (selectedProject) {
-        const criteria = await fairsService.getEvaluationCriteria(selectedProject.fairId);
-        setRealCriteria(criteria);
+        const { data: criteria, error } = await fairsService.getEvaluationCriteria(selectedProject.fair_id);
+        if (error) {
+          toast.error('Erro ao carregar critérios.');
+          return;
+        }
+        setRealCriteria(criteria || []);
         
         // Reset scores with new criteria
         const initialScores: Record<string, number> = {};
-        criteria.forEach(c => {
-          initialScores[c.name] = 0;
-        });
-        setEvaluationData(prev => ({ ...prev, scores: initialScores }));
+        const initialFeedback: Record<string, string> = {};
+        if (criteria) {
+          criteria.forEach(c => {
+            initialScores[c.name] = 0;
+            initialFeedback[c.name] = '';
+          });
+        }
+        setEvaluationData(prev => ({ ...prev, scores: initialScores, criterion_feedback: initialFeedback }));
       }
     };
     fetchCriteria();
@@ -171,15 +188,11 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
   const handleUpdateRole = async (userId: string, newRole: UserRole) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ role: newRole })
-        .eq('uid', userId);
-      
+      const { error } = await usersService.updateUserRole(userId, newRole);
       if (error) throw error;
       toast.success(`Usuário atualizado para ${ROLE_LABELS[newRole]}`);
     } catch (error: any) {
-      toast.error('Erro ao atualizar cargo.');
+      toast.error('Erro ao atualizar cargo: ' + error.message);
     }
   };
 
@@ -188,44 +201,121 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
     
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      const mockUserStr = localStorage.getItem('dev_user');
-      const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-      const userId = user?.id || mockUser?.id;
-
-      await evaluationsService.submitEvaluation({
+      const { error } = await evaluationsService.submitEvaluation({
         ...evaluationData,
-        projectId: selectedProject.id,
-        evaluatorId: userId
+        project_id: selectedProject.id
       } as any);
       
+      if (error) throw error;
+
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#6366f1', '#a855f7', '#ec4899']
+      });
+
       toast.success('Avaliação submetida com sucesso!');
       setSelectedProject(null);
-      setEvaluationData({ scores: {}, feedback: '', is_conflict_declared: false });
-    } catch (error) {
-      toast.error('Erro ao submeter avaliação.');
+      setIsFocusMode(false);
+      setEvaluationData({ scores: {}, criterion_feedback: {}, feedback: '', is_conflict_declared: false });
+    } catch (error: any) {
+      toast.error('Erro ao submeter avaliação: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const filteredUsers = allUsers.filter(u => 
-    u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (loading) {
+    return <EvaluatorSkeleton />;
+  }
+
   if (selectedProject) {
-    // ... (keep existing evaluation form logic)
     return (
-      <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-6 lg:space-y-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setSelectedProject(null)} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
-            <ShieldAlert className="w-6 h-6 rotate-180" />
+      <div className={cn(
+        "p-4 lg:p-8 max-w-4xl mx-auto space-y-6 lg:space-y-8 transition-all duration-500",
+        isFocusMode && "max-w-5xl"
+      )}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => {
+              setSelectedProject(null);
+              setIsFocusMode(false);
+            }} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
+              <ShieldAlert className="w-6 h-6 rotate-180" />
+            </button>
+            <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Avaliar Projeto</h2>
+          </div>
+          <button 
+            onClick={() => setIsFocusMode(!isFocusMode)}
+            className={cn(
+              "px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold transition-all",
+              isFocusMode 
+                ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                : "bg-slate-100 dark:bg-app-surface text-slate-600 dark:text-app-muted border border-slate-200 dark:border-app-border"
+            )}
+          >
+            <Maximize2 className="w-4 h-4" />
+            {isFocusMode ? 'Sair do Modo Foco' : 'Modo Foco'}
           </button>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Avaliar: {selectedProject.title}</h2>
         </div>
 
-        <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 lg:p-8 space-y-8">
+        <div className={cn(
+          "bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 lg:p-8 space-y-8 transition-all duration-500",
+          isFocusMode && "shadow-2xl ring-1 ring-primary/10"
+        )}>
+          {/* Project Details (Blind Review implementation) */}
+          <div className="space-y-4 pb-6 border-b border-slate-100 dark:border-app-border">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full">
+                    {selectedProject.category}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase tracking-wider bg-slate-100 dark:bg-app-surface px-2 py-0.5 rounded-full">
+                    {selectedProject.modality}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-app-fg">{selectedProject.title}</h3>
+              </div>
+            </div>
+            
+            {selectedProject.abstract && (
+              <div className="bg-slate-50 dark:bg-app-surface p-4 rounded-xl">
+                <h4 className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase mb-2">Resumo do Projeto</h4>
+                <p className="text-sm text-slate-600 dark:text-app-fg leading-relaxed">{selectedProject.abstract}</p>
+              </div>
+            )}
+
+            {!isBlindMode && (
+              <div className="flex flex-wrap gap-6 pt-2">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase mb-2">Integrantes</h4>
+                  <div className="flex -space-x-2">
+                    {selectedProject.members?.map((member, i) => (
+                      <div 
+                        key={i} 
+                        className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white dark:border-app-card flex items-center justify-center text-[10px] font-bold text-primary" 
+                        title={`${member.name} (${member.role})`}
+                      >
+                        {member.name.charAt(0)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase mb-2">Instituição</h4>
+                  <p className="text-sm font-bold text-slate-700 dark:text-app-fg">ID: {selectedProject.institution_id}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Conflict Declaration (RF09) */}
           <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-xl flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -250,34 +340,88 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
           {!evaluationData.is_conflict_declared && (
             <>
-              {/* Criteria (RF04, RF08) */}
+              {/* Criteria (RF04, RF08, Rubrics Scoring) */}
               <div className="space-y-6">
-                <h3 className="text-lg font-bold flex items-center gap-2">
+                <h3 className="text-lg font-bold flex items-center gap-2 dark:text-app-fg">
                   <Star className="w-5 h-5 text-primary" />
                   Critérios de Avaliação (RF04)
                 </h3>
-                <div className="grid gap-6">
+                <div className="grid gap-8">
                   {realCriteria.length > 0 ? realCriteria.map(criterion => (
-                    <div key={criterion.id} className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <label className="text-sm font-bold text-slate-700 dark:text-app-fg">{criterion.name}</label>
-                          {criterion.description && <p className="text-xs text-slate-400 dark:text-app-muted">{criterion.description}</p>}
+                    <div key={criterion.id} className="space-y-4 p-4 rounded-2xl bg-slate-50/50 dark:bg-app-surface/30 border border-slate-100 dark:border-app-border">
+                      <div className="flex justify-between items-start">
+                        <div className="max-w-[70%]">
+                          <label className="text-sm font-bold text-slate-700 dark:text-app-fg block mb-1">{criterion.name}</label>
+                          {criterion.description && <p className="text-xs text-slate-400 dark:text-app-muted leading-relaxed">{criterion.description}</p>}
                         </div>
-                        <span className="text-sm font-bold text-primary">{evaluationData.scores?.[criterion.name] || 0}/{criterion.max_score}</span>
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-primary">{evaluationData.scores?.[criterion.name] || 0}</span>
+                          <span className="text-xs font-bold text-slate-400 dark:text-app-muted ml-1">/ {criterion.max_score}</span>
+                        </div>
                       </div>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max={criterion.max_score} 
-                        step={criterion.scale_type === 'numeric' ? "0.5" : "1"}
-                        value={evaluationData.scores?.[criterion.name] || 0}
-                        onChange={e => setEvaluationData({
-                          ...evaluationData, 
-                          scores: { ...evaluationData.scores, [criterion.name]: parseFloat(e.target.value) }
-                        })}
-                        className="w-full h-2 bg-slate-100 dark:bg-app-surface rounded-lg appearance-none cursor-pointer accent-primary"
-                      />
+
+                      {criterion.scale_type === 'rubric' && criterion.rubrics ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {Object.entries(criterion.rubrics).sort(([a], [b]) => Number(a) - Number(b)).map(([score, desc]) => (
+                            <button
+                              key={score}
+                              onClick={() => setEvaluationData({
+                                ...evaluationData,
+                                scores: { ...evaluationData.scores, [criterion.name]: Number(score) }
+                              })}
+                              className={cn(
+                                "p-4 rounded-xl text-left transition-all border group relative",
+                                evaluationData.scores?.[criterion.name] === Number(score)
+                                  ? "bg-primary/10 border-primary text-primary shadow-sm"
+                                  : "bg-white dark:bg-app-surface border-slate-200 dark:border-app-border text-slate-600 dark:text-app-muted hover:border-primary/50"
+                              )}
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Nível {score}</span>
+                                {evaluationData.scores?.[criterion.name] === Number(score) && <CheckCircle2 className="w-4 h-4" />}
+                              </div>
+                              <p className="text-xs leading-relaxed font-medium">{desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max={criterion.max_score} 
+                            step={criterion.scale_type === 'numeric' ? "0.5" : "1"}
+                            value={evaluationData.scores?.[criterion.name] || 0}
+                            onChange={e => setEvaluationData({
+                              ...evaluationData, 
+                              scores: { ...evaluationData.scores, [criterion.name]: parseFloat(e.target.value) }
+                            })}
+                            className="w-full h-2 bg-slate-100 dark:bg-app-surface rounded-lg appearance-none cursor-pointer accent-primary"
+                          />
+                          <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-app-muted uppercase">
+                            <span>0</span>
+                            <span>{criterion.max_score / 2}</span>
+                            <span>{criterion.max_score}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Per-criterion Feedback (Structured Feedback) */}
+                      <div className="pt-2">
+                        <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-app-muted">
+                          <MessageSquare className="w-3 h-3" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Observação Específica</span>
+                        </div>
+                        <textarea 
+                          value={evaluationData.criterion_feedback?.[criterion.name] || ''}
+                          onChange={e => setEvaluationData({
+                            ...evaluationData,
+                            criterion_feedback: { ...evaluationData.criterion_feedback, [criterion.name]: e.target.value }
+                          })}
+                          className="w-full bg-white dark:bg-app-surface border border-slate-200 dark:border-app-border rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-primary/20 h-20 dark:text-app-fg resize-none" 
+                          placeholder={`O que você achou da ${criterion.name.toLowerCase()}?`}
+                        />
+                      </div>
                     </div>
                   )) : (
                     ['Inovação', 'Metodologia', 'Apresentação', 'Viabilidade'].map(criterion => (
@@ -304,17 +448,17 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                 </div>
               </div>
 
-              {/* Feedback (RF12) */}
+              {/* General Feedback (RF12) */}
               <div className="space-y-4">
                 <h3 className="text-lg font-bold flex items-center gap-2 dark:text-app-fg">
                   <MessageSquare className="w-5 h-5 text-primary" />
-                  Feedback Construtivo (RF12)
+                  Feedback Geral (RF12)
                 </h3>
                 <textarea 
                   value={evaluationData.feedback}
                   onChange={e => setEvaluationData({...evaluationData, feedback: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-4 outline-none focus:ring-2 focus:ring-primary/20 h-32 dark:text-app-fg" 
-                  placeholder="Escreva sugestões e observações para os autores..." 
+                  className="w-full bg-slate-50 dark:bg-app-surface border border-slate-200 dark:border-app-border rounded-xl p-4 outline-none focus:ring-2 focus:ring-primary/20 h-32 dark:text-app-fg" 
+                  placeholder="Escreva sugestões e observações gerais para os autores..." 
                 />
               </div>
             </>
@@ -385,10 +529,10 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                              {user.displayName?.charAt(0) || user.email?.charAt(0)}
+                              {user.display_name?.charAt(0) || user.email?.charAt(0)}
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{user.displayName}</p>
+                              <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{user.display_name}</p>
                               <p className="text-xs text-slate-500 dark:text-app-muted">{user.email}</p>
                             </div>
                           </div>

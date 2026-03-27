@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
 import { toast } from 'sonner';
+import { usersService } from '../services/supabaseService';
 import { UserRole } from '../types';
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -37,26 +38,27 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
         const mock = JSON.parse(mockUserStr);
         setUser(mock);
         setProfile(mock);
-        setDisplayName(mock.displayName || '');
-        setEmailNotifications(mock.settings?.emailNotifications ?? true);
-        setDeadlineAlerts(mock.settings?.deadlineAlerts ?? true);
+        setDisplayName(mock.display_name || '');
+        setEmailNotifications(mock.settings?.email_notifications ?? true);
+        setDeadlineAlerts(mock.settings?.deadline_alerts ?? true);
         return;
       }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('uid', user.id)
-          .single();
+        const { data: profile, error } = await usersService.getProfile(user.id);
         
+        if (error) {
+          toast.error('Erro ao carregar perfil.');
+          return;
+        }
+
         if (profile) {
           setProfile(profile);
-          setDisplayName(profile.displayName || '');
-          setEmailNotifications(profile.settings?.emailNotifications ?? true);
-          setDeadlineAlerts(profile.settings?.deadlineAlerts ?? true);
+          setDisplayName(profile.display_name || '');
+          setEmailNotifications(profile.settings?.email_notifications ?? true);
+          setDeadlineAlerts(profile.settings?.deadline_alerts ?? true);
         }
       }
     };
@@ -67,20 +69,20 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
     try {
       setLoading(true);
       const newSettings = {
-        emailNotifications,
-        deadlineAlerts,
+        email_notifications: emailNotifications,
+        deadline_alerts: deadlineAlerts,
         ...updates.settings
       };
 
-      const finalDisplayName = updates.displayName !== undefined ? updates.displayName : displayName;
-      const finalPhotoURL = updates.photoURL !== undefined ? updates.photoURL : profile.photoURL;
+      const finalDisplayName = updates.display_name !== undefined ? updates.display_name : displayName;
+      const finalPhotoURL = updates.photo_url !== undefined ? updates.photo_url : profile.photo_url;
 
       if (localStorage.getItem('dev_user')) {
         const mock = JSON.parse(localStorage.getItem('dev_user')!);
         const updated = { 
           ...mock, 
-          displayName: finalDisplayName,
-          photoURL: finalPhotoURL,
+          display_name: finalDisplayName,
+          photo_url: finalPhotoURL,
           settings: newSettings 
         };
         localStorage.setItem('dev_user', JSON.stringify(updated));
@@ -89,18 +91,17 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
         return;
       }
 
-      const { error } = await supabase
-        .from('users')
-        .update({ 
-          displayName: finalDisplayName,
-          photoURL: finalPhotoURL,
-          settings: newSettings 
-        })
-        .eq('uid', user.id);
+      const { data: updatedProfile, error } = await usersService.updateProfile(user.id, { 
+        display_name: finalDisplayName,
+        photo_url: finalPhotoURL,
+        settings: newSettings 
+      });
 
       if (error) throw error;
       
-      setProfile({ ...profile, displayName: finalDisplayName, photoURL: finalPhotoURL, settings: newSettings });
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+      }
       toast.success('Perfil atualizado com sucesso!');
     } catch (error: any) {
       toast.error('Erro ao atualizar perfil: ' + error.message);
@@ -121,7 +122,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result as string;
-      await handleUpdateProfile({ photoURL: base64String });
+      await handleUpdateProfile({ photo_url: base64String });
     };
     reader.readAsDataURL(file);
   };
@@ -165,10 +166,10 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
           <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 text-center space-y-4">
             <div className="relative inline-block">
               <div className="w-24 h-24 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-primary-light font-bold text-3xl overflow-hidden border-4 border-white dark:border-app-card shadow-sm">
-                {profile.photoURL ? (
-                  <img src={profile.photoURL} alt={profile.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                {profile.photo_url ? (
+                  <img src={profile.photo_url} alt={profile.display_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  profile.displayName?.[0] || 'U'
+                  profile.display_name?.[0] || 'U'
                 )}
               </div>
               <label className="absolute bottom-0 right-0 p-2 bg-white dark:bg-app-surface rounded-full shadow-md border border-slate-100 dark:border-app-border text-slate-600 dark:text-app-muted hover:text-primary dark:hover:text-primary-light transition-colors cursor-pointer">
@@ -177,7 +178,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
               </label>
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-900 dark:text-app-fg">{profile.displayName}</h3>
+              <h3 className="font-bold text-lg text-slate-900 dark:text-app-fg">{profile.display_name}</h3>
               <p className="text-xs font-bold text-primary dark:text-primary-light uppercase tracking-wider">
                 {ROLE_LABELS[profile.role as UserRole] || profile.role}
               </p>
@@ -189,7 +190,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-app-muted">
                 <Building className="w-4 h-4 text-slate-400 dark:text-app-muted/60" />
-                <span>{profile.institutionId || 'Instituição Padrão'}</span>
+                <span>{profile.institution_id || 'Instituição Padrão'}</span>
               </div>
             </div>
           </div>
@@ -302,7 +303,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
                     onClick={() => {
                       const newVal = !emailNotifications;
                       setEmailNotifications(newVal);
-                      handleUpdateProfile({ settings: { emailNotifications: newVal, deadlineAlerts } });
+                      handleUpdateProfile({ settings: { email_notifications: newVal, deadline_alerts: deadlineAlerts } });
                     }}
                     className={cn(
                       "w-10 h-5 rounded-full relative cursor-pointer transition-colors",
@@ -321,7 +322,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
                     onClick={() => {
                       const newVal = !deadlineAlerts;
                       setDeadlineAlerts(newVal);
-                      handleUpdateProfile({ settings: { emailNotifications, deadlineAlerts: newVal } });
+                      handleUpdateProfile({ settings: { email_notifications: emailNotifications, deadline_alerts: newVal } });
                     }}
                     className={cn(
                       "w-10 h-5 rounded-full relative cursor-pointer transition-colors",

@@ -50,12 +50,17 @@ export function Sidebar({ activeTab, onTabChange, onClose, userRole = 'student' 
     <aside className="w-64 bg-background-light dark:bg-app-card border-r border-primary/10 dark:border-app-border flex flex-col justify-between p-4 sticky top-0 h-screen transition-colors duration-300">
       <div className="flex flex-col gap-8">
         <div className="flex items-center gap-3 px-2">
-          <div className="bg-primary rounded-lg p-2 flex items-center justify-center">
-            <Beaker className="text-white w-5 h-5" />
+          <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-lg">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div className="flex flex-col">
             <h1 className="text-slate-900 dark:text-app-fg text-base font-bold leading-tight">Astea Scientific</h1>
-            <p className="text-primary text-xs font-medium">Management</p>
+            <p className="text-primary text-xs font-medium uppercase tracking-widest">Plataforma</p>
           </div>
         </div>
 

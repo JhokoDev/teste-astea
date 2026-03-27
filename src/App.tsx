@@ -118,10 +118,10 @@ export default function App() {
           const { data: newProfile, error: insertError } = await supabase.from('users').insert({
             uid: authUser.id,
             email: authUser.email,
-            displayName: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
-            photoURL: authUser.user_metadata?.avatar_url,
+            display_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+            photo_url: authUser.user_metadata?.avatar_url,
             role: isAdminEmail ? 'admin' : 'student',
-            institutionId: 'default-inst'
+            institution_id: 'default-inst'
           }).select().single();
           
           if (insertError) {

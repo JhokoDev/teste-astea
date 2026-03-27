@@ -120,10 +120,10 @@ export function LoginView() {
           const { error: insertError } = await supabase.from('users').insert({
             uid: user.id,
             email: user.email,
-            displayName: name,
-            photoURL: null,
+            display_name: name,
+            photo_url: null,
             role: role,
-            institutionId: 'default-inst'
+            institution_id: 'default-inst'
           });
 
           if (insertError) {

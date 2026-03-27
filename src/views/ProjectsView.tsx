@@ -28,7 +28,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     abstract: '',
     category: '',
     modality: '',
-    fairId: '',
+    fair_id: '',
     members: [],
     evidence: {
       files: [],
@@ -38,84 +38,124 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   });
 
   useEffect(() => {
-    const unsubscribeProjects = projectsService.subscribeToProjects((data) => {
-      // Filter projects based on role
-      if (userRole === 'admin') {
-        setProjects(data);
-      } else if (userRole === 'manager') {
-        // We'll filter this after fairs are loaded or use institutionId
-        setProjects(data.filter(p => p.institutionId === profile?.institutionId));
-      } else if (userRole === 'student' || userRole === 'advisor') {
-        setProjects(data.filter(p => p.creatorId === userId || p.members.some(m => m.email === profile?.email)));
-      } else {
-        setProjects(data);
+    const unsubscribeProjects = projectsService.subscribeToProjects((event) => {
+      const filterProject = (p: Project) => {
+        if (userRole === 'admin') return true;
+        if (userRole === 'manager') return p.institution_id === profile?.institution_id;
+        if (userRole === 'student' || userRole === 'advisor') return p.creator_id === userId || p.members.some(m => m.email === profile?.email);
+        return true;
+      };
+
+      if (event.type === 'INITIAL') {
+        setProjects(event.data.filter(filterProject));
+      } else if (event.type === 'INSERT') {
+        if (filterProject(event.newItem)) {
+          setProjects(prev => [...prev, event.newItem]);
+        }
+      } else if (event.type === 'UPDATE') {
+        if (filterProject(event.newItem)) {
+          setProjects(prev => {
+            const exists = prev.some(p => p.id === event.newItem.id);
+            if (exists) return prev.map(p => p.id === event.newItem.id ? event.newItem : p);
+            return [...prev, event.newItem];
+          });
+        } else {
+          setProjects(prev => prev.filter(p => p.id !== event.newItem.id));
+        }
+      } else if (event.type === 'DELETE') {
+        setProjects(prev => prev.filter(p => p.id !== event.oldItem.id));
       }
       setLoading(false);
     });
     
-    const unsubscribeFairs = fairsService.subscribeToFairs((data) => {
-      console.log('Fairs received in ProjectsView:', data);
-      setAllFairs(data);
-      const now = new Date();
-      
-      // Filter fairs for the submission form
-      let filteredFairs = data;
-      if (userRole === 'manager') {
-        filteredFairs = data.filter(f => f.organizerId === userId || f.organizerId === null);
-      } else if (userRole === 'student' || userRole === 'advisor') {
-        // Students can only see published fairs in registration period
-        filteredFairs = data.filter(f => f.status === 'publicado');
-      }
+    const unsubscribeFairs = fairsService.subscribeToFairs((event) => {
+      const filterFair = (f: Fair) => {
+        if (userRole === 'manager') {
+          return f.organizer_id === userId || f.organizer_id === null;
+        } else if (userRole === 'student' || userRole === 'advisor') {
+          return f.status === 'publicado';
+        }
+        return true;
+      };
 
-      const activeFairs = filteredFairs.filter(f => {
-        // Only show published fairs for submission
+      const isActive = (f: Fair) => {
+        const now = new Date();
         const isStatusOk = f.status === 'publicado';
-        
-        // If dates are not set, we show it if status is ok
         if (!f.dates?.registration_start || !f.dates?.registration_end) return isStatusOk;
-        
         const start = new Date(f.dates.registration_start);
         start.setHours(0, 0, 0, 0);
-        
         const end = new Date(f.dates.registration_end);
         end.setHours(23, 59, 59, 999);
-        
-        const inRegistrationPeriod = now >= start && now <= end;
-        
-        return isStatusOk && inRegistrationPeriod;
-      });
-      
-      setFairs(activeFairs);
+        return isStatusOk && now >= start && now <= end;
+      };
+
+      if (event.type === 'INITIAL') {
+        setAllFairs(event.data);
+        setFairs(event.data.filter(filterFair).filter(isActive));
+      } else if (event.type === 'INSERT') {
+        setAllFairs(prev => [...prev, event.newItem]);
+        if (filterFair(event.newItem) && isActive(event.newItem)) {
+          setFairs(prev => [...prev, event.newItem]);
+        }
+      } else if (event.type === 'UPDATE') {
+        setAllFairs(prev => prev.map(f => f.id === event.newItem.id ? event.newItem : f));
+        if (filterFair(event.newItem) && isActive(event.newItem)) {
+          setFairs(prev => {
+            const exists = prev.some(f => f.id === event.newItem.id);
+            if (exists) return prev.map(f => f.id === event.newItem.id ? event.newItem : f);
+            return [...prev, event.newItem];
+          });
+        } else {
+          setFairs(prev => prev.filter(f => f.id !== event.newItem.id));
+        }
+      } else if (event.type === 'DELETE') {
+        setAllFairs(prev => prev.filter(f => f.id !== event.oldItem.id));
+        setFairs(prev => prev.filter(f => f.id !== event.oldItem.id));
+      }
     });
 
     return () => {
       unsubscribeProjects();
       unsubscribeFairs();
     };
-  }, [userRole, userId, profile?.email, profile?.institutionId]);
+  }, [userRole, userId, profile?.email, profile?.institution_id]);
 
   useEffect(() => {
-    if (selectedProject) {
-      projectsService.getProjectVersions(selectedProject.id).then(setVersions);
-    } else {
-      setVersions([]);
-    }
+    const fetchVersions = async () => {
+      if (selectedProject) {
+        const { data, error } = await projectsService.getProjectVersions(selectedProject.id);
+        if (error) {
+          toast.error('Erro ao carregar versões: ' + error.message);
+          return;
+        }
+        setVersions(data || []);
+      } else {
+        setVersions([]);
+      }
+    };
+    fetchVersions();
   }, [selectedProject]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fairId || !formData.title || !formData.abstract) {
+    if (!formData.fair_id || !formData.title || !formData.abstract) {
       toast.error('Preencha os campos obrigatórios.');
       return;
     }
 
     try {
       setLoading(true);
-      await projectsService.submitProject({
+      const { data, error } = await projectsService.submitProject({
         ...formData,
-        creatorId: userId,
-        institutionId: profile?.institutionId
+        creator_id: userId,
+        institution_id: profile?.institution_id
       } as any);
+      
+      if (error) {
+        toast.error(`Erro ao submeter projeto: ${error.message}`);
+        return;
+      }
+
       toast.success('Projeto submetido com sucesso!');
       setIsSubmitting(false);
       setFormData({
@@ -123,15 +163,14 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         abstract: '',
         category: '',
         modality: '',
-        fairId: '',
+        fair_id: '',
         members: [],
         evidence: { files: [], links: [] },
         custom_data: {}
       });
     } catch (error: any) {
       console.error('Error submitting project:', error);
-      const errorMessage = error?.message || 'Erro desconhecido';
-      toast.error(`Erro ao submeter projeto: ${errorMessage}`);
+      toast.error('Erro inesperado ao submeter projeto.');
     } finally {
       setLoading(false);
     }
@@ -152,8 +191,8 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
             <div className="space-y-1 md:col-span-2">
               <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Selecione a Feira</label>
               <select 
-                value={formData.fairId}
-                onChange={e => setFormData({...formData, fairId: e.target.value, category: '', modality: ''})}
+                value={formData.fair_id}
+                onChange={e => setFormData({...formData, fair_id: e.target.value, category: '', modality: ''})}
                 className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
               >
                 <option value="" className="dark:bg-app-surface">Escolha uma feira ativa...</option>
@@ -189,14 +228,14 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
               <select 
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
-                disabled={!formData.fairId}
+                disabled={!formData.fair_id}
                 className={cn(
                   "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
-                  !formData.fairId && "opacity-50 cursor-not-allowed"
+                  !formData.fair_id && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <option value="" className="dark:bg-app-surface">{formData.fairId ? 'Selecione uma categoria...' : 'Selecione uma feira primeiro'}</option>
-                {formData.fairId && fairs.find(f => f.id === formData.fairId)?.structure?.categories.map(cat => (
+                <option value="" className="dark:bg-app-surface">{formData.fair_id ? 'Selecione uma categoria...' : 'Selecione uma feira primeiro'}</option>
+                {formData.fair_id && fairs.find(f => f.id === formData.fair_id)?.structure?.categories.map(cat => (
                   <option key={cat} value={cat} className="dark:bg-app-surface">{cat}</option>
                 ))}
               </select>
@@ -207,21 +246,21 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
               <select 
                 value={formData.modality}
                 onChange={e => setFormData({...formData, modality: e.target.value})}
-                disabled={!formData.fairId}
+                disabled={!formData.fair_id}
                 className={cn(
                   "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
-                  !formData.fairId && "opacity-50 cursor-not-allowed"
+                  !formData.fair_id && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <option value="" className="dark:bg-app-surface">{formData.fairId ? 'Selecione uma modalidade...' : 'Selecione uma feira primeiro'}</option>
-                {formData.fairId && fairs.find(f => f.id === formData.fairId)?.structure?.modalities.map(mod => (
+                <option value="" className="dark:bg-app-surface">{formData.fair_id ? 'Selecione uma modalidade...' : 'Selecione uma feira primeiro'}</option>
+                {formData.fair_id && fairs.find(f => f.id === formData.fair_id)?.structure?.modalities.map(mod => (
                   <option key={mod} value={mod} className="dark:bg-app-surface">{mod}</option>
                 ))}
               </select>
             </div>
 
             {/* Custom Form Fields */}
-            {formData.fairId && fairs.find(f => f.id === formData.fairId)?.structure?.custom_form?.map(field => (
+            {formData.fair_id && fairs.find(f => f.id === formData.fair_id)?.structure?.custom_form?.map(field => (
               <div key={field.id} className="space-y-1 md:col-span-2">
                 <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">
                   {field.label}
@@ -318,7 +357,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   }
 
   if (selectedProject) {
-    const projectFair = allFairs.find(f => f.id === selectedProject.fairId);
+    const projectFair = allFairs.find(f => f.id === selectedProject.fair_id);
 
     return (
       <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">

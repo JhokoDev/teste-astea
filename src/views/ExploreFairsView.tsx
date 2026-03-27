@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Calendar, Users, ChevronRight, Loader2, Info, ExternalLink, ShieldCheck, FileText } from 'lucide-react';
+import { Search, MapPin, Calendar, Users, ChevronRight, Loader2, Info, ExternalLink, ShieldCheck, FileText, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
 import { Fair, User } from '../types';
 import { toast } from 'sonner';
+import { Skeleton } from '../components/Skeleton';
 import { supabase } from '../supabase';
 
 interface ExploreFairsViewProps {
@@ -22,19 +23,35 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
 
   useEffect(() => {
     const fetchFairsAndCounts = async () => {
-      const unsubscribe = fairsService.subscribeToFairs(async (data) => {
-        const publishedFairs = data.filter(f => f.status === 'publicado');
-        setFairs(publishedFairs);
+      const unsubscribe = fairsService.subscribeToFairs(async (event) => {
+        if (event.type === 'INITIAL') {
+          const publishedFairs = event.data.filter(f => f.status === 'publicado');
+          setFairs(publishedFairs);
+        } else if (event.type === 'INSERT') {
+          if (event.newItem.status === 'publicado') {
+            setFairs(prev => [...prev, event.newItem]);
+          }
+        } else if (event.type === 'UPDATE') {
+          setFairs(prev => {
+            const isPublished = event.newItem.status === 'publicado';
+            const exists = prev.some(f => f.id === event.newItem.id);
+            
+            if (isPublished && !exists) return [...prev, event.newItem];
+            if (!isPublished && exists) return prev.filter(f => f.id !== event.newItem.id);
+            if (isPublished && exists) return prev.map(f => f.id === event.newItem.id ? event.newItem : f);
+            return prev;
+          });
+        } else if (event.type === 'DELETE') {
+          setFairs(prev => prev.filter(f => f.id !== event.oldItem.id));
+        }
 
-        // Fetch project counts for each published fair
-        const { data: counts, error } = await supabase
-          .from('projects')
-          .select('fairId');
+        // Fetch project counts
+        const { data: counts, error } = await fairsService.getProjectCounts();
         
         if (!error && counts) {
           const countMap: Record<string, number> = {};
           counts.forEach(p => {
-            countMap[p.fairId] = (countMap[p.fairId] || 0) + 1;
+            countMap[p.fair_id] = (countMap[p.fair_id] || 0) + 1;
           });
           setProjectCounts(countMap);
         }
@@ -76,25 +93,11 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
     const checkApplication = async () => {
       if (!selectedFair || !profile) return;
       
-      const isMockId = profile.uid.startsWith('00000000') || 
-                       profile.uid.startsWith('11111111') || 
-                       profile.uid.startsWith('22222222') || 
-                       profile.uid === 'dev-admin-id';
-
-      let query = supabase
-        .from('evaluator_applications')
-        .select('id')
-        .eq('fairId', selectedFair.id);
+      const { data, error } = await fairsService.checkEvaluatorApplication(selectedFair.id, profile.uid);
       
-      if (isMockId) {
-        query = query.is('userId', null);
-      } else {
-        query = query.eq('userId', profile.uid);
+      if (!error) {
+        setHasApplied(!!data);
       }
-        
-      const { data } = await query.maybeSingle();
-      
-      setHasApplied(!!data);
     };
     
     checkApplication();
@@ -105,29 +108,38 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
     
     try {
       setApplying(true);
-      await fairsService.applyAsEvaluator(selectedFair.id);
+      const { error } = await fairsService.applyAsEvaluator(selectedFair.id);
+      
+      if (error) {
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+          toast.info('Você já se candidatou para esta feira.');
+          setHasApplied(true);
+          return;
+        }
+        throw error;
+      }
+
       toast.success('Candidatura enviada com sucesso! Aguarde a revisão do organizador.');
       setHasApplied(true);
     } catch (error: any) {
       console.error('Erro ao candidatar-se:', error);
-      let message = 'Erro ao enviar candidatura.';
-      
-      try {
-        const errObj = JSON.parse(error.message);
-        if (errObj.error?.includes('duplicate key value violates unique constraint')) {
-          message = 'Você já se candidatou para esta feira.';
-          setHasApplied(true);
-        } else {
-          message = `Erro: ${errObj.error || error.message}`;
-        }
-      } catch (e) {
-        message = `Erro: ${error.message}`;
-      }
-      
-      toast.error(message);
+      toast.error('Erro ao enviar candidatura: ' + error.message);
     } finally {
       setApplying(false);
     }
+  };
+
+  const getBannerGradient = (id: string) => {
+    const gradients = [
+      'from-indigo-500 to-purple-600',
+      'from-emerald-400 to-cyan-500',
+      'from-amber-400 to-orange-500',
+      'from-rose-400 to-pink-600',
+      'from-blue-500 to-indigo-600',
+      'from-teal-400 to-emerald-500'
+    ];
+    const index = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % gradients.length;
+    return gradients[index];
   };
 
   const filteredFairs = fairs.filter(f => 
@@ -294,8 +306,26 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-white dark:bg-app-card elevation-1 rounded-3xl overflow-hidden border border-slate-100 dark:border-app-border">
+              <Skeleton className="h-32 rounded-none" />
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+                <div className="flex gap-4 pt-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -307,12 +337,14 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
               onClick={() => setSelectedFair(fair)}
               className="bg-white dark:bg-app-card elevation-1 rounded-3xl overflow-hidden cursor-pointer group border border-transparent hover:border-primary/10 transition-all"
             >
-              <div className="h-32 bg-primary/5 dark:bg-primary/10 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
-                <Calendar className="w-12 h-12 text-primary/20 dark:text-primary/40" />
+              <div className={cn(
+                "h-32 flex items-center justify-center relative overflow-hidden",
+                `bg-gradient-to-br ${getBannerGradient(fair.id)}`
+              )}>
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                <Sparkles className="w-12 h-12 text-white/20 group-hover:text-white/40 transition-all duration-500 group-hover:scale-110" />
                 <div className={cn(
-                  "absolute top-4 right-4 px-3 py-1 backdrop-blur-sm rounded-full text-[10px] font-bold uppercase",
-                  getFairStatus(fair).color
+                  "absolute top-4 right-4 px-3 py-1 backdrop-blur-md bg-white/20 border border-white/30 rounded-full text-[10px] font-bold uppercase text-white shadow-sm"
                 )}>
                   {getFairStatus(fair).label}
                 </div>

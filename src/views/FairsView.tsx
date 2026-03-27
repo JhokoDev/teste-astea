@@ -72,12 +72,12 @@ export function FairsView({ profile }: FairsViewProps) {
       // Projects count
       const { data: pCounts } = await supabase
         .from('projects')
-        .select('fairId');
+        .select('fair_id');
       
       if (pCounts) {
         const pMap: Record<string, number> = {};
         pCounts.forEach(p => {
-          pMap[p.fairId] = (pMap[p.fairId] || 0) + 1;
+          pMap[p.fair_id] = (pMap[p.fair_id] || 0) + 1;
         });
         setProjectCounts(pMap);
       }
@@ -85,13 +85,13 @@ export function FairsView({ profile }: FairsViewProps) {
       // Evaluators count (approved applications)
       const { data: eCounts } = await supabase
         .from('evaluator_applications')
-        .select('fairId')
+        .select('fair_id')
         .eq('status', 'aprovado');
       
       if (eCounts) {
         const eMap: Record<string, number> = {};
         eCounts.forEach(e => {
-          eMap[e.fairId] = (eMap[e.fairId] || 0) + 1;
+          eMap[e.fair_id] = (eMap[e.fair_id] || 0) + 1;
         });
         setEvaluatorCounts(eMap);
       }
@@ -99,29 +99,65 @@ export function FairsView({ profile }: FairsViewProps) {
       // Pending Evaluators count
       const { data: peCounts } = await supabase
         .from('evaluator_applications')
-        .select('fairId')
+        .select('fair_id')
         .eq('status', 'pendente');
       
       if (peCounts) {
         const peMap: Record<string, number> = {};
         peCounts.forEach(pe => {
-          peMap[pe.fairId] = (peMap[pe.fairId] || 0) + 1;
+          peMap[pe.fair_id] = (peMap[pe.fair_id] || 0) + 1;
         });
         setPendingEvaluatorCounts(peMap);
       }
     };
 
-    const unsubscribe = fairsService.subscribeToFairs((data) => {
-      let filtered = data;
-      if (userRole === 'manager') {
-        filtered = data.filter(f => f.organizerId === userId || f.organizerId === null);
-      } else if (userRole === 'admin') {
-        filtered = data;
-      } else {
-        filtered = data.filter(f => f.status === 'publicado');
+    const unsubscribe = fairsService.subscribeToFairs((event) => {
+      const filterFair = (f: Fair) => {
+        if (userRole === 'manager') {
+          return f.organizer_id === userId || f.organizer_id === null;
+        } else if (userRole === 'admin') {
+          return true;
+        } else {
+          return f.status === 'publicado';
+        }
+      };
+
+      if (event.type === 'INITIAL') {
+        const filtered = event.data.filter(filterFair);
+        setFairs(filtered);
+        fetchCounts(filtered);
+      } else if (event.type === 'INSERT') {
+        if (filterFair(event.newItem)) {
+          setFairs(prev => {
+            const next = [...prev, event.newItem];
+            fetchCounts(next);
+            return next;
+          });
+        }
+      } else if (event.type === 'UPDATE') {
+        if (filterFair(event.newItem)) {
+          setFairs(prev => {
+            const exists = prev.some(f => f.id === event.newItem.id);
+            const next = exists 
+              ? prev.map(f => f.id === event.newItem.id ? event.newItem : f)
+              : [...prev, event.newItem];
+            fetchCounts(next);
+            return next;
+          });
+        } else {
+          setFairs(prev => {
+            const next = prev.filter(f => f.id !== event.newItem.id);
+            fetchCounts(next);
+            return next;
+          });
+        }
+      } else if (event.type === 'DELETE') {
+        setFairs(prev => {
+          const next = prev.filter(f => f.id !== event.oldItem.id);
+          fetchCounts(next);
+          return next;
+        });
       }
-      setFairs(filtered);
-      fetchCounts(filtered);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -185,21 +221,29 @@ export function FairsView({ profile }: FairsViewProps) {
         console.log('FairsView: Iniciando atualização de feira:', formData);
         const toastId = toast.loading('Atualizando feira no banco de dados...');
         
-        await fairsService.updateFair(editingFairId, formData);
+        const { error } = await fairsService.updateFair(editingFairId, formData);
         
         toast.dismiss(toastId);
+        if (error) {
+          toast.error(`Erro ao atualizar feira: ${error.message}`);
+          return;
+        }
         toast.success('Feira atualizada com sucesso!');
       } else {
         console.log('FairsView: Iniciando criação de feira:', formData);
         const toastId = toast.loading('Criando feira no banco de dados...');
         
-        await fairsService.createFair({
+        const { error } = await fairsService.createFair({
           ...formData,
-          organizerId: profile?.uid,
-          institutionId: profile?.institutionId
+          organizer_id: profile?.uid,
+          institution_id: profile?.institution_id
         });
         
         toast.dismiss(toastId);
+        if (error) {
+          toast.error(`Erro ao criar feira: ${error.message}`);
+          return;
+        }
         toast.success('Feira criada com sucesso!');
       }
       
@@ -222,14 +266,7 @@ export function FairsView({ profile }: FairsViewProps) {
       });
     } catch (error: any) {
       console.error('FairsView: Erro detalhado ao criar feira:', error);
-      let errorMessage = 'Erro ao criar feira.';
-      try {
-        const parsedError = JSON.parse(error.message);
-        errorMessage = `Erro: ${parsedError.error || errorMessage}`;
-      } catch (e) {
-        errorMessage = error.message || errorMessage;
-      }
-      toast.error(errorMessage);
+      toast.error('Erro inesperado ao processar feira.');
     } finally {
       setLoading(false);
     }
@@ -848,10 +885,13 @@ export function FairsView({ profile }: FairsViewProps) {
               <div className="flex gap-2">
                 {fair.status === 'rascunho' && (
                   <button 
-                    onClick={() => {
-                      fairsService.updateFair(fair.id, { status: 'publicado' })
-                        .then(() => toast.success('Feira publicada com sucesso!'))
-                        .catch(() => toast.error('Erro ao publicar feira.'));
+                    onClick={async () => {
+                      const { error } = await fairsService.updateFair(fair.id, { status: 'publicado' });
+                      if (error) {
+                        toast.error('Erro ao publicar feira: ' + error.message);
+                      } else {
+                        toast.success('Feira publicada com sucesso!');
+                      }
                     }}
                     className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all"
                   >
@@ -861,10 +901,13 @@ export function FairsView({ profile }: FairsViewProps) {
                 
                 {fair.status === 'publicado' && (
                   <button 
-                    onClick={() => {
-                      fairsService.updateFair(fair.id, { status: 'pausado' })
-                        .then(() => toast.success('Feira pausada com sucesso!'))
-                        .catch(() => toast.error('Erro ao pausar feira.'));
+                    onClick={async () => {
+                      const { error } = await fairsService.updateFair(fair.id, { status: 'pausado' });
+                      if (error) {
+                        toast.error('Erro ao pausar feira: ' + error.message);
+                      } else {
+                        toast.success('Feira pausada com sucesso!');
+                      }
                     }}
                     className="flex-1 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all"
                   >
@@ -875,21 +918,26 @@ export function FairsView({ profile }: FairsViewProps) {
                 {fair.status === 'pausado' && (
                   <>
                     <button 
-                      onClick={() => {
-                        fairsService.updateFair(fair.id, { status: 'publicado' })
-                          .then(() => toast.success('Feira retomada com sucesso!'))
-                          .catch(() => toast.error('Erro ao retomar feira.'));
+                      onClick={async () => {
+                        const { error } = await fairsService.updateFair(fair.id, { status: 'publicado' });
+                        if (error) {
+                          toast.error('Erro ao retomar feira: ' + error.message);
+                        } else {
+                          toast.success('Feira retomada com sucesso!');
+                        }
                       }}
                       className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-all"
                     >
                       Retomar
                     </button>
                     <button 
-                      onClick={() => {
-                        // Using a custom modal would be better, but for now we'll just use a simple check
-                        fairsService.updateFair(fair.id, { status: 'encerrado' })
-                          .then(() => toast.success('Feira encerrada com sucesso!'))
-                          .catch(() => toast.error('Erro ao encerrar feira.'));
+                      onClick={async () => {
+                        const { error } = await fairsService.updateFair(fair.id, { status: 'encerrado' });
+                        if (error) {
+                          toast.error('Erro ao encerrar feira: ' + error.message);
+                        } else {
+                          toast.success('Feira encerrada com sucesso!');
+                        }
                       }}
                       className="flex-1 py-2 rounded-xl bg-slate-500 text-white text-xs font-bold hover:bg-slate-600 transition-all"
                     >

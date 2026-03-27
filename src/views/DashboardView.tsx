@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { KPICard } from '../components/KPICard';
 import { StageFunnel } from '../components/StageFunnel';
+import { FairTimeline } from '../components/FairTimeline';
+import { EvaluationRadarChart } from '../components/EvaluationRadarChart';
 import { ProjectTable } from '../components/ProjectTable';
+import { ProjectKanban } from '../components/ProjectKanban';
+import { EvaluationHeatmap } from '../components/EvaluationHeatmap';
+import { GeographicDistribution } from '../components/GeographicDistribution';
 import { AlertsPanel } from '../components/AlertsPanel';
+import { DashboardSkeleton } from '../components/Skeleton';
 import { motion } from 'motion/react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LayoutGrid, List } from 'lucide-react';
+import { cn } from '../lib/utils';
 import { projectsService, fairsService, usersService, evaluationsService } from '../services/supabaseService';
 import { Project, Fair, KPI, Stage, Alert, UserRole } from '../types';
 
@@ -18,32 +25,89 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [evaluatorStats, setEvaluatorStats] = useState({ completed: 0, drafts: 0, avgScore: '0.0' });
 
   useEffect(() => {
-    const unsubProjects = projectsService.subscribeToProjects((data) => {
-      // Filter projects based on role
-      if (userRole === 'student' || userRole === 'advisor') {
-        setProjects(data.filter(p => p.creatorId === userId || p.members.some(m => m.email === userId)));
-      } else {
+    const unsubProjects = projectsService.subscribeToProjects((event) => {
+      if (event.type === 'INITIAL') {
+        let data = event.data;
+        if (userRole === 'student' || userRole === 'advisor') {
+          data = data.filter(p => p.creator_id === userId || p.members.some(m => m.email === userId));
+        }
         setProjects(data);
+      } else if (event.type === 'INSERT') {
+        const p = event.newItem;
+        const isVisible = (userRole !== 'student' && userRole !== 'advisor') || 
+                          (p.creator_id === userId || p.members.some(m => m.email === userId));
+        if (isVisible) {
+          setProjects(prev => [...prev, p]);
+        }
+      } else if (event.type === 'UPDATE') {
+        const p = event.newItem;
+        const isVisible = (userRole !== 'student' && userRole !== 'advisor') || 
+                          (p.creator_id === userId || p.members.some(m => m.email === userId));
+        if (isVisible) {
+          setProjects(prev => prev.map(item => item.id === p.id ? p : item));
+        } else {
+          setProjects(prev => prev.filter(item => item.id !== p.id));
+        }
+      } else if (event.type === 'DELETE') {
+        setProjects(prev => prev.filter(p => p.id !== event.oldItem.id));
       }
     });
     
-    const unsubFairs = fairsService.subscribeToFairs((data) => {
-      if (userRole === 'manager') {
-        setFairs(data.filter(f => f.organizerId === userId || f.organizerId === null));
-      } else if (userRole === 'admin') {
-        setFairs(data);
-      } else {
-        setFairs(data.filter(f => f.status === 'publicado'));
+    const unsubFairs = fairsService.subscribeToFairs((event) => {
+      const filterFair = (f: Fair) => {
+        if (userRole === 'manager') {
+          return f.organizer_id === userId || f.organizer_id === null;
+        } else if (userRole === 'admin') {
+          return true;
+        } else {
+          return f.status === 'publicado';
+        }
+      };
+
+      if (event.type === 'INITIAL') {
+        setFairs(event.data.filter(filterFair));
+      } else if (event.type === 'INSERT') {
+        if (filterFair(event.newItem)) {
+          setFairs(prev => [...prev, event.newItem]);
+        }
+      } else if (event.type === 'UPDATE') {
+        if (filterFair(event.newItem)) {
+          setFairs(prev => {
+            const exists = prev.some(f => f.id === event.newItem.id);
+            if (exists) {
+              return prev.map(f => f.id === event.newItem.id ? event.newItem : f);
+            } else {
+              return [...prev, event.newItem];
+            }
+          });
+        } else {
+          setFairs(prev => prev.filter(f => f.id !== event.newItem.id));
+        }
+      } else if (event.type === 'DELETE') {
+        setFairs(prev => prev.filter(f => f.id !== event.oldItem.id));
       }
     });
 
-    const unsubUsers = usersService.subscribeToUsers((data) => {
-      setUsers(data);
+    const unsubUsers = usersService.subscribeToUsers(async (event) => {
+      if (event.type === 'INITIAL') {
+        setUsers(event.data);
+      } else if (event.type === 'INSERT') {
+        setUsers(prev => [...prev, event.newItem]);
+      } else if (event.type === 'UPDATE') {
+        setUsers(prev => prev.map(u => u.uid === event.newItem.uid ? event.newItem : u));
+      } else if (event.type === 'DELETE') {
+        setUsers(prev => prev.filter(u => u.uid !== event.oldItem.uid));
+      }
+
       if (userRole === 'evaluator' && userId) {
-        evaluationsService.getEvaluatorStats(userId).then(setEvaluatorStats);
+        const { data: stats } = await evaluationsService.getEvaluatorStats(userId);
+        if (stats) {
+          setEvaluatorStats(stats);
+        }
       }
       setLoading(false);
     });
@@ -159,10 +223,10 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
     if (userRole === 'admin') return true;
     if (userRole === 'manager') {
       const managerFairIds = fairs.map(f => f.id);
-      return managerFairIds.includes(p.fairId);
+      return managerFairIds.includes(p.fair_id);
     }
     if (userRole === 'student' || userRole === 'advisor') {
-      return p.creatorId === userId || p.members.some(m => m.email === userId);
+      return p.creator_id === userId || p.members.some(m => m.email === userId);
     }
     if (userRole === 'evaluator') {
       // Evaluators see assigned projects (mocked for now)
@@ -175,6 +239,40 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
   const stages = getStages();
   const alerts = getAlerts();
 
+  const mockPhases = [
+    { id: '1', label: 'Inscrições', startDate: '2026-03-01', endDate: '2026-03-20', status: 'past' as const },
+    { id: '2', label: 'Avaliação', startDate: '2026-03-21', endDate: '2026-04-10', status: 'current' as const },
+    { id: '3', label: 'Resultados', startDate: '2026-04-11', endDate: '2026-04-15', status: 'future' as const },
+    { id: '4', label: 'Premiação', startDate: '2026-04-16', endDate: '2026-04-20', status: 'future' as const }
+  ];
+
+  const mockRadarData = [
+    { subject: 'Inovação', A: 8.5, fullMark: 10 },
+    { subject: 'Metodologia', A: 7.0, fullMark: 10 },
+    { subject: 'Apresentação', A: 9.0, fullMark: 10 },
+    { subject: 'Viabilidade', A: 6.5, fullMark: 10 },
+    { subject: 'Impacto', A: 8.0, fullMark: 10 }
+  ];
+
+  const mockHeatmapData = [
+    { category: 'Ciências Exatas', count: 45, intensity: 0.9 },
+    { category: 'Ciências Humanas', count: 12, intensity: 0.3 },
+    { category: 'Tecnologia', count: 38, intensity: 0.75 },
+    { category: 'Meio Ambiente', count: 22, intensity: 0.5 },
+    { category: 'Saúde', count: 15, intensity: 0.4 },
+    { category: 'Educação', count: 8, intensity: 0.15 },
+    { category: 'Artes', count: 5, intensity: 0.1 },
+    { category: 'Engenharia', count: 31, intensity: 0.65 }
+  ];
+
+  const mockGeoData = [
+    { region: 'São Paulo', count: 124, percentage: 42 },
+    { region: 'Minas Gerais', count: 58, percentage: 20 },
+    { region: 'Rio de Janeiro', count: 45, percentage: 15 },
+    { region: 'Paraná', count: 32, percentage: 11 },
+    { region: 'Outros', count: 35, percentage: 12 }
+  ];
+
   const getWelcomeMessage = () => {
     switch (userRole) {
       case 'admin': return 'Painel do Administrador';
@@ -185,6 +283,10 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
       default: return 'Bem-vindo ao Astea';
     }
   };
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 overflow-y-auto bg-background-light dark:bg-app-bg transition-colors duration-300 min-h-full">
@@ -198,6 +300,14 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
           <KPICard key={kpi.label} kpi={kpi} />
         ))}
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <FairTimeline phases={mockPhases} />
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 lg:gap-6">
         <div className="lg:col-span-7 space-y-4 lg:space-y-6">
@@ -215,7 +325,40 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
             transition={{ delay: 0.3 }}
             className="bg-white dark:bg-app-card elevation-1 rounded-xl p-6"
           >
-            <ProjectTable projects={filteredProjects} />
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-app-fg uppercase tracking-wider">
+                {viewMode === 'table' ? 'Tabela de Projetos' : 'Fluxo de Projetos (Kanban)'}
+              </h3>
+              {(userRole === 'admin' || userRole === 'manager') && (
+                <div className="flex items-center bg-slate-100 dark:bg-app-surface p-1 rounded-lg">
+                  <button 
+                    onClick={() => setViewMode('table')}
+                    className={cn(
+                      "p-1.5 rounded-md transition-all",
+                      viewMode === 'table' ? "bg-white dark:bg-app-card shadow-sm text-primary" : "text-slate-400 dark:text-app-muted hover:text-slate-600"
+                    )}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('kanban')}
+                    className={cn(
+                      "p-1.5 rounded-md transition-all",
+                      viewMode === 'kanban' ? "bg-white dark:bg-app-card shadow-sm text-primary" : "text-slate-400 dark:text-app-muted hover:text-slate-600"
+                    )}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {viewMode === 'table' ? (
+              <ProjectTable projects={filteredProjects} />
+            ) : (
+              <ProjectKanban projects={filteredProjects} />
+            )}
+
             {filteredProjects.length === 0 && !loading && (
               <div className="py-12 text-center text-slate-400 dark:text-app-muted">
                 Nenhum projeto encontrado no banco de dados.
@@ -234,8 +377,17 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="lg:col-span-3"
+          className="lg:col-span-3 space-y-6"
         >
+          {userRole === 'evaluator' && (
+            <EvaluationRadarChart data={mockRadarData} title="Meu Perfil de Avaliação" />
+          )}
+          {userRole === 'admin' && (
+            <>
+              <EvaluationHeatmap data={mockHeatmapData} />
+              <GeographicDistribution data={mockGeoData} />
+            </>
+          )}
           <AlertsPanel alerts={alerts} />
           {alerts.length === 0 && !loading && (
             <div className="bg-white dark:bg-app-card elevation-1 rounded-xl p-6 text-center text-slate-400 dark:text-app-muted text-sm">

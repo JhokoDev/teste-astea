@@ -5,13 +5,13 @@ export type UserRole = 'admin' | 'manager' | 'advisor' | 'evaluator' | 'student'
 export interface User {
   uid: string;
   email: string;
-  displayName: string;
-  photoURL: string | null;
+  display_name: string;
+  photo_url: string | null;
   role: UserRole;
-  institutionId: string;
+  institution_id: string;
   settings?: {
-    emailNotifications: boolean;
-    deadlineAlerts: boolean;
+    email_notifications: boolean;
+    deadline_alerts: boolean;
   };
 }
 
@@ -19,8 +19,8 @@ export interface Institution {
   id: string;
   name: string;
   settings: {
-    dataIsolation: boolean;
-    autoAnonymization: boolean;
+    data_isolation: boolean;
+    auto_anonymization: boolean;
   };
 }
 
@@ -39,8 +39,8 @@ export interface Fair {
   name: string;
   description?: string;
   status: FairStatus;
-  institutionId: string;
-  organizerId: string;
+  institution_id: string;
+  organizer_id: string;
   dates: {
     registration_start: string | null;
     registration_end: string | null;
@@ -65,13 +65,14 @@ export interface Fair {
 
 export interface EvaluationCriteria {
   id: string;
-  fairId: string;
+  fair_id: string;
   category?: string;
   name: string;
   description?: string;
   weight: number;
   scale_type: 'numeric' | 'rubric';
   max_score: number;
+  rubrics?: Record<number, string>;
 }
 
 export interface Project {
@@ -81,9 +82,9 @@ export interface Project {
   category: string;
   modality: string;
   status: ProjectStatus;
-  fairId: string;
-  institutionId: string;
-  creatorId: string;
+  fair_id: string;
+  institution_id: string;
+  creator_id: string;
   members: ProjectMember[];
   evidence: {
     files: EvidenceFile[];
@@ -114,7 +115,7 @@ export interface EvidenceLink {
 
 export interface ProjectVersion {
   id: string;
-  projectId: string;
+  project_id: string;
   version_number: number;
   data: any;
   created_by: string;
@@ -123,9 +124,10 @@ export interface ProjectVersion {
 
 export interface Evaluation {
   id: string;
-  projectId: string;
-  evaluatorId: string;
+  project_id: string;
+  evaluator_id: string;
   scores: Record<string, number>;
+  criterion_feedback?: Record<string, string>;
   feedback?: string;
   status: 'rascunho' | 'finalizado';
   is_conflict_declared: boolean;
@@ -135,15 +137,15 @@ export interface Evaluation {
 
 export interface AuditLog {
   id: string;
-  userId: string;
+  user_id: string;
   userName?: string; // Joined
   action: string;
   target_table: string;
   target_id: string;
   old_data?: any;
   new_data?: any;
-  institutionId: string;
-  timestamp: string;
+  institution_id: string;
+  created_at: string;
 }
 
 export interface KPI {
@@ -173,9 +175,9 @@ export interface Alert {
 
 export interface EvaluatorApplication {
   id: string;
-  fairId: string;
-  userId: string;
+  fair_id: string;
+  user_id: string;
   status: 'pendente' | 'aprovado' | 'rejeitado';
   created_at: string;
-  institutionId: string;
+  institution_id: string;
 }
