@@ -91,7 +91,7 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
 
   useEffect(() => {
     const checkApplication = async () => {
-      if (!selectedFair || !profile) return;
+      if (!selectedFair || !profile || !profile.uid) return;
       
       const { data, error } = await fairsService.checkEvaluatorApplication(selectedFair.id, profile.uid);
       

@@ -49,9 +49,9 @@ async function logAction(action: string, table: string, id: string, oldData?: an
     if (!userId) return;
 
     // For database foreign keys to auth.users, we must use a real UUID or null
-    const isMockId = userId.startsWith('00000000') || 
-                     userId.startsWith('11111111') || 
-                     userId.startsWith('22222222') || 
+    const isMockId = userId?.startsWith('00000000') || 
+                     userId?.startsWith('11111111') || 
+                     userId?.startsWith('22222222') || 
                      userId === 'dev-admin-id';
     const dbUserId = isMockId ? null : userId;
 
@@ -194,7 +194,6 @@ export const fairsService = {
         .insert({
           fair_id: fairId,
           user_id: userId,
-          institution_id: profile?.institution_id || 'default-inst',
           status: 'pendente'
         })
         .select()
@@ -208,9 +207,9 @@ export const fairsService = {
   },
 
   checkEvaluatorApplication: async (fairId: string, userId: string): Promise<ApiResponse<any>> => {
-    const isMockId = userId.startsWith('00000000') || 
-                     userId.startsWith('11111111') || 
-                     userId.startsWith('22222222') || 
+    const isMockId = userId?.startsWith('00000000') || 
+                     userId?.startsWith('11111111') || 
+                     userId?.startsWith('22222222') || 
                      userId === 'dev-admin-id';
 
     let query = supabase
@@ -488,11 +487,78 @@ export const evaluationsService = {
   },
 
   getEvaluatorApplications: async (filters: { user_id?: string; status?: string; institution_id?: string }): Promise<ApiResponse<any[]>> => {
-    let query = supabase.from('evaluator_applications').select('*');
+    let query = supabase
+      .from('evaluator_applications')
+      .select(`
+        *,
+        fair:fairs!fair_id(name)
+      `);
+      
     if (filters.user_id) query = query.eq('user_id', filters.user_id);
     if (filters.status) query = query.eq('status', filters.status);
-    if (filters.institution_id) query = query.eq('institution_id', filters.institution_id);
-    return safeRequest<any[]>(query);
+    
+    const response = await safeRequest<any[]>(query);
+    
+    if (response.data && response.data.length > 0) {
+      // Filter by institution_id in memory if needed
+      if (filters.institution_id) {
+        response.data = response.data.filter(app => 
+          app.institution_id === filters.institution_id || 
+          (app.fair && app.fair.institution_id === filters.institution_id)
+        );
+      }
+
+      // Fetch users manually since we can't use a foreign key due to type mismatch (text vs uuid)
+      const userIds = response.data.map(app => app.user_id).filter(Boolean);
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('*')
+          .in('uid', userIds);
+          
+        if (users) {
+          const userMap = users.reduce((acc, user) => {
+            acc[user.uid] = {
+              ...user,
+              display_name: user?.display_name || user?.name || user?.displayName || user?.displayname
+            };
+            return acc;
+          }, {} as Record<string, any>);
+          
+          response.data = response.data.map(app => ({
+            ...app,
+            user: userMap[app.user_id] || null
+          }));
+        }
+      }
+    }
+    
+    return response;
+  },
+
+  updateEvaluatorApplicationStatus: async (applicationId: string, status: 'aprovado' | 'rejeitado'): Promise<ApiResponse<any>> => {
+    const { data: oldApp } = await supabase.from('evaluator_applications').select('*').eq('id', applicationId).single();
+    const response = await safeRequest<any>(
+      supabase
+        .from('evaluator_applications')
+        .update({ status })
+        .eq('id', applicationId)
+        .select()
+        .single()
+    );
+
+    if (response.data) {
+      await logAction('UPDATE_EVALUATOR_APPLICATION', 'evaluator_applications', applicationId, oldApp, response.data);
+      
+      // If approved, also update the user role to evaluator if it's not already
+      if (status === 'aprovado') {
+        const uid = response.data.user_id || response.data.userId || response.data.userid;
+        if (uid) {
+          await supabase.from('users').update({ role: 'evaluator' }).eq('uid', uid);
+        }
+      }
+    }
+    return response;
   },
 
   getAssignedProjects: async (userId: string): Promise<ApiResponse<Project[]>> => {
@@ -522,10 +588,40 @@ export const evaluationsService = {
 
 export const usersService = {
   getUsers: async (filters: { role?: string; institution_id?: string }): Promise<ApiResponse<any[]>> => {
-    let query = supabase.from('users').select('*').order('display_name');
-    if (filters.role) query = query.eq('role', filters.role);
+    let query = supabase.from('users').select('*');
     if (filters.institution_id) query = query.eq('institution_id', filters.institution_id);
-    return safeRequest<any[]>(query);
+    
+    // If filtering by role = 'evaluator', we should also include users who have an approved application
+    // but their role wasn't updated due to a bug.
+    if (filters.role && filters.role !== 'evaluator') {
+      query = query.eq('role', filters.role);
+    }
+    
+    const response = await safeRequest<any[]>(query);
+    
+    if (response.data) {
+      if (filters.role === 'evaluator') {
+        const { data: approvedApps } = await supabase.from('evaluator_applications').select('*').eq('status', 'aprovado');
+        const approvedUserIds = new Set(approvedApps?.map(app => app.user_id || app.userId || app.userid).filter(Boolean) || []);
+        
+        response.data = response.data.filter(user => user.role === 'evaluator' || approvedUserIds.has(user.uid));
+        
+        // Fix role in memory and background
+        response.data.forEach(user => {
+          if (approvedUserIds.has(user.uid) && user.role !== 'evaluator') {
+            user.role = 'evaluator';
+            supabase.from('users').update({ role: 'evaluator' }).eq('uid', user.uid).then();
+          }
+        });
+      }
+      
+      response.data = response.data.map(user => ({
+        ...user,
+        display_name: user?.display_name || user?.name || user?.displayName || user?.displayname
+      }));
+      response.data.sort((a, b) => (a.display_name || '').localeCompare(b.display_name || ''));
+    }
+    return response;
   },
 
   updateUserRole: async (userId: string, newRole: string): Promise<ApiResponse<any>> => {
@@ -546,27 +642,54 @@ export const usersService = {
   },
 
   getProfile: async (userId: string): Promise<ApiResponse<any>> => {
-    return safeRequest<any>(
+    const response = await safeRequest<any>(
       supabase
         .from('users')
         .select('*')
         .eq('uid', userId)
         .maybeSingle()
     );
+    if (response.data) {
+      response.data.display_name = response.data?.display_name || response.data?.name || response.data?.displayName || response.data?.displayname;
+      response.data.photo_url = response.data?.photo_url || response.data?.photoURL || response.data?.photourl;
+    }
+    return response;
   },
 
   updateProfile: async (userId: string, updates: any): Promise<ApiResponse<any>> => {
     const { data: oldProfile } = await supabase.from('users').select('*').eq('uid', userId).single();
+    
+    const dbUpdates = { ...updates };
+    
+    if (oldProfile) {
+      if ('display_name' in dbUpdates) {
+        if ('displayName' in oldProfile) dbUpdates.displayName = dbUpdates.display_name;
+        else if ('displayname' in oldProfile) dbUpdates.displayname = dbUpdates.display_name;
+        else if ('name' in oldProfile) dbUpdates.name = dbUpdates.display_name;
+        
+        if (!('display_name' in oldProfile)) delete dbUpdates.display_name;
+      }
+      
+      if ('photo_url' in dbUpdates) {
+        if ('photoURL' in oldProfile) dbUpdates.photoURL = dbUpdates.photo_url;
+        else if ('photourl' in oldProfile) dbUpdates.photourl = dbUpdates.photo_url;
+        
+        if (!('photo_url' in oldProfile)) delete dbUpdates.photo_url;
+      }
+    }
+
     const response = await safeRequest<any>(
       supabase
         .from('users')
-        .update(updates)
+        .update(dbUpdates)
         .eq('uid', userId)
         .select()
         .single()
     );
 
     if (response.data) {
+      response.data.display_name = response.data?.display_name || response.data?.name || response.data?.displayName || response.data?.displayname;
+      response.data.photo_url = response.data?.photo_url || response.data?.photoURL || response.data?.photourl;
       await logAction('UPDATE_PROFILE', 'users', userId, oldProfile, response.data);
     }
     return response;
@@ -580,7 +703,11 @@ export const usersService = {
         return;
       }
       if (data) {
-        onEvent({ type: 'INITIAL', data });
+        const mappedData = data.map(user => ({
+          ...user,
+          display_name: user?.display_name || user?.name || user?.displayName || user?.displayname
+        }));
+        onEvent({ type: 'INITIAL', data: mappedData });
       }
     };
 
@@ -589,12 +716,16 @@ export const usersService = {
     const subscription = supabase
       .channel('users_changes')
       .on('postgres_changes' as any, { event: '*', table: 'users' }, (payload: any) => {
+        const mapUser = (user: any) => ({
+          ...user,
+          display_name: user?.name || user?.display_name
+        });
         if (payload.eventType === 'INSERT') {
-          onEvent({ type: 'INSERT', newItem: payload.new });
+          onEvent({ type: 'INSERT', newItem: mapUser(payload.new) });
         } else if (payload.eventType === 'UPDATE') {
-          onEvent({ type: 'UPDATE', newItem: payload.new, oldItem: payload.old });
+          onEvent({ type: 'UPDATE', newItem: mapUser(payload.new), oldItem: mapUser(payload.old) });
         } else if (payload.eventType === 'DELETE') {
-          onEvent({ type: 'DELETE', oldItem: payload.old });
+          onEvent({ type: 'DELETE', oldItem: mapUser(payload.old) });
         }
       })
       .subscribe();

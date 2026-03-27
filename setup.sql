@@ -27,6 +27,8 @@ begin
   -- display_name
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='displayName') then
     alter table public.users rename column "displayName" to display_name;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='displayname') then
+    alter table public.users rename column displayname to display_name;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='display_name') then
     alter table public.users add column display_name text;
   end if;
@@ -34,6 +36,8 @@ begin
   -- photo_url
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photoURL') then
     alter table public.users rename column "photoURL" to photo_url;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photourl') then
+    alter table public.users rename column photourl to photo_url;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photo_url') then
     alter table public.users add column photo_url text;
   end if;
@@ -41,6 +45,8 @@ begin
   -- institution_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institutionId') then
     alter table public.users rename column "institutionId" to institution_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institutionid') then
+    alter table public.users rename column institutionid to institution_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institution_id') then
     alter table public.users add column institution_id text references public.institutions(id) default 'default-inst';
   end if;
@@ -48,6 +54,8 @@ begin
   -- created_at
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='createdAt') then
     alter table public.users rename column "createdAt" to created_at;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='createdat') then
+    alter table public.users rename column createdat to created_at;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='created_at') then
     alter table public.users add column created_at timestamp with time zone default timezone('utc'::text, now()) not null;
   end if;
@@ -86,6 +94,8 @@ begin
   -- institution_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='fairs' and column_name='institutionId') then
     alter table public.fairs rename column "institutionId" to institution_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='fairs' and column_name='institutionid') then
+    alter table public.fairs rename column institutionid to institution_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='fairs' and column_name='institution_id') then
     alter table public.fairs add column institution_id text references public.institutions(id) default 'default-inst';
   end if;
@@ -93,6 +103,8 @@ begin
   -- organizer_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='fairs' and column_name='organizerId') then
     alter table public.fairs rename column "organizerId" to organizer_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='fairs' and column_name='organizerid') then
+    alter table public.fairs rename column organizerid to organizer_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='fairs' and column_name='organizer_id') then
     alter table public.fairs add column organizer_id text;
   end if;
@@ -117,6 +129,8 @@ begin
   -- fair_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluation_criteria' and column_name='fairId') then
     alter table public.evaluation_criteria rename column "fairId" to fair_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluation_criteria' and column_name='fairid') then
+    alter table public.evaluation_criteria rename column fairid to fair_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluation_criteria' and column_name='fair_id') then
     alter table public.evaluation_criteria add column fair_id uuid references fairs(id) on delete cascade;
   end if;
@@ -149,6 +163,8 @@ begin
   -- fair_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='fairId') then
     alter table public.projects rename column "fairId" to fair_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='fairid') then
+    alter table public.projects rename column fairid to fair_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='fair_id') then
     alter table public.projects add column fair_id uuid references fairs(id) on delete cascade;
   end if;
@@ -156,6 +172,8 @@ begin
   -- creator_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='creatorId') then
     alter table public.projects rename column "creatorId" to creator_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='creatorid') then
+    alter table public.projects rename column creatorid to creator_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='creator_id') then
     alter table public.projects add column creator_id text;
   end if;
@@ -163,6 +181,8 @@ begin
   -- institution_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='institutionId') then
     alter table public.projects rename column "institutionId" to institution_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='institutionid') then
+    alter table public.projects rename column institutionid to institution_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='projects' and column_name='institution_id') then
     alter table public.projects add column institution_id text references public.institutions(id) default 'default-inst';
   end if;
@@ -184,6 +204,8 @@ begin
   -- fair_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='fairId') then
     alter table public.evaluator_applications rename column "fairId" to fair_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='fairid') then
+    alter table public.evaluator_applications rename column fairid to fair_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='fair_id') then
     alter table public.evaluator_applications add column fair_id uuid references fairs(id) on delete cascade;
   end if;
@@ -191,6 +213,8 @@ begin
   -- user_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='userId') then
     alter table public.evaluator_applications rename column "userId" to user_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='userid') then
+    alter table public.evaluator_applications rename column userid to user_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='user_id') then
     alter table public.evaluator_applications add column user_id text;
   end if;
@@ -198,6 +222,8 @@ begin
   -- institution_id
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='institutionId') then
     alter table public.evaluator_applications rename column "institutionId" to institution_id;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='institutionid') then
+    alter table public.evaluator_applications rename column institutionid to institution_id;
   elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='evaluator_applications' and column_name='institution_id') then
     alter table public.evaluator_applications add column institution_id text references public.institutions(id) default 'default-inst';
   end if;

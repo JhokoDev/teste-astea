@@ -67,6 +67,10 @@ export default function App() {
     if (mockUserStr) {
       try {
         const mockUser = JSON.parse(mockUserStr);
+        // Ensure mock user has uid for compatibility
+        if (mockUser.id && !mockUser.uid) {
+          mockUser.uid = mockUser.id;
+        }
         // If it's the old ID, clear it and let them log in again
         if (mockUser.id === 'dev-admin-id') {
           localStorage.removeItem('dev_user');
@@ -115,21 +119,37 @@ export default function App() {
 
         if (error && error.code === 'PGRST116') { // Not found
           const isAdminEmail = authUser.email === 'admin@gmail.com' || authUser.email === 'aistudiojhoko@gmail.com';
-          const { data: newProfile, error: insertError } = await supabase.from('users').insert({
+          
+          const { data: anyUser } = await supabase.from('users').select('*').limit(1).maybeSingle();
+          const nameCol = anyUser && 'displayName' in anyUser ? 'displayName' : 
+                          anyUser && 'displayname' in anyUser ? 'displayname' : 
+                          anyUser && 'name' in anyUser ? 'name' : 'display_name';
+          const photoCol = anyUser && 'photoURL' in anyUser ? 'photoURL' :
+                           anyUser && 'photourl' in anyUser ? 'photourl' : 'photo_url';
+
+          const insertData: any = {
             uid: authUser.id,
             email: authUser.email,
-            display_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
-            photo_url: authUser.user_metadata?.avatar_url,
             role: isAdminEmail ? 'admin' : 'student',
             institution_id: 'default-inst'
-          }).select().single();
+          };
+          insertData[nameCol] = authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
+          insertData[photoCol] = authUser.user_metadata?.avatar_url;
+
+          const { data: newProfile, error: insertError } = await supabase.from('users').insert(insertData).select().single();
           
           if (insertError) {
             console.error('Error creating user profile in App.tsx:', insertError);
           } else {
+            if (newProfile) {
+              newProfile.display_name = newProfile[nameCol] || newProfile.display_name;
+              newProfile.photo_url = newProfile[photoCol] || newProfile.photo_url;
+            }
             setProfile(newProfile);
           }
         } else if (userProfile) {
+          userProfile.display_name = userProfile?.display_name || userProfile?.name || userProfile?.displayName || userProfile?.displayname;
+          userProfile.photo_url = userProfile?.photo_url || userProfile?.photoURL || userProfile?.photourl;
           setProfile(userProfile);
         } else if (error) {
           console.error('Error fetching user profile in App.tsx:', error);

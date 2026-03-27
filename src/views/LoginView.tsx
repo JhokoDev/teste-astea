@@ -116,15 +116,25 @@ export function LoginView() {
           const isAdminEmail = email === 'admin@gmail.com' || email === 'aistudiojhoko@gmail.com';
           const role = isAdminEmail ? 'admin' : 'student';
           
-          // Create user profile in Supabase table
-          const { error: insertError } = await supabase.from('users').insert({
+          // Determine schema dynamically
+          const { data: anyUser } = await supabase.from('users').select('*').limit(1).maybeSingle();
+          const nameCol = anyUser && 'displayName' in anyUser ? 'displayName' : 
+                          anyUser && 'displayname' in anyUser ? 'displayname' : 
+                          anyUser && 'name' in anyUser ? 'name' : 'display_name';
+          const photoCol = anyUser && 'photoURL' in anyUser ? 'photoURL' :
+                           anyUser && 'photourl' in anyUser ? 'photourl' : 'photo_url';
+
+          const insertData: any = {
             uid: user.id,
             email: user.email,
-            display_name: name,
-            photo_url: null,
             role: role,
             institution_id: 'default-inst'
-          });
+          };
+          insertData[nameCol] = name;
+          insertData[photoCol] = null;
+
+          // Create user profile in Supabase table
+          const { error: insertError } = await supabase.from('users').insert(insertData);
 
           if (insertError) {
             console.error("Error creating user profile:", insertError);
