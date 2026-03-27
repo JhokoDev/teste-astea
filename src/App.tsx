@@ -182,13 +182,13 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsMobileSidebarOpen(false)}
-                className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+                className="fixed inset-0 bg-black/50 z-[60] lg:hidden backdrop-blur-sm"
               />
             )}
           </AnimatePresence>
 
           <div className={cn(
-            "fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:relative lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-[70] transform transition-transform duration-300 lg:relative lg:translate-x-0",
             isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}>
             <Sidebar 

@@ -24,7 +24,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="flex items-center justify-between px-4 lg:px-8 py-4 bg-[#FBFDF9] dark:bg-app-card border-b border-primary/5 dark:border-app-border sticky top-0 z-10 transition-colors duration-300">
+    <header className="flex items-center justify-between px-4 lg:px-8 py-4 bg-[#FBFDF9] dark:bg-app-card border-b border-primary/5 dark:border-app-border sticky top-0 z-50 transition-colors duration-300">
       <div className="flex items-center gap-4 lg:gap-8">
         <button 
           onClick={onMenuClick}

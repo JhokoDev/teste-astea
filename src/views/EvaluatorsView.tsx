@@ -488,7 +488,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
   // Management View for Managers/Admins
   if (userRole === 'admin' || userRole === 'manager') {
     return (
-      <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+      <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Gestão de Usuários e Avaliadores</h2>
@@ -616,7 +616,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
 
   // Default View for Evaluators
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Minhas Avaliações</h2>

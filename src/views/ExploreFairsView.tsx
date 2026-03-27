@@ -149,7 +149,7 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
 
   if (selectedFair) {
     return (
-      <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+      <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
         <div className="flex items-center gap-4">
           <button onClick={() => setSelectedFair(null)} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
             <ChevronRight className="w-6 h-6 rotate-180" />
@@ -284,7 +284,7 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
   }
 
   return (
-    <div className="p-4 lg:p-8 space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+    <div className="p-4 lg:p-8 space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
       <div className="max-w-4xl mx-auto text-center space-y-4">
         <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-app-fg tracking-tight">
           Descubra sua próxima <span className="text-primary dark:text-primary-light italic">oportunidade</span>

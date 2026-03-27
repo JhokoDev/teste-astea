@@ -69,7 +69,7 @@ export function SettingsView() {
   }
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg transition-colors duration-300">
       <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Configurações do Sistema</h2>
 
       <div className="grid gap-6">

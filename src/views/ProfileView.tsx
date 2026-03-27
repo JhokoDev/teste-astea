@@ -154,7 +154,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
   }
 
   return (
-    <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+    <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-app-fg">Meu Perfil</h2>
         <p className="text-slate-500 dark:text-app-muted">Gerencie suas informações pessoais e configurações de conta.</p>

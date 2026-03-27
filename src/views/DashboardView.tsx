@@ -289,7 +289,7 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
   }
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 overflow-y-auto bg-background-light dark:bg-app-bg transition-colors duration-300 min-h-full">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
       <div className="flex flex-col gap-1">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-app-fg">{getWelcomeMessage()}</h2>
         <p className="text-slate-500 dark:text-app-muted text-sm">Acompanhe o progresso e as métricas em tempo real.</p>

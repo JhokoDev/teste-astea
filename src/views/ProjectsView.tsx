@@ -178,7 +178,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
 
   if (isSubmitting) {
     return (
-      <div className="p-4 lg:p-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg transition-colors duration-300">
         <div className="flex items-center gap-4 mb-8">
           <button onClick={() => setIsSubmitting(false)} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
             <ChevronRight className="w-6 h-6 rotate-180" />
@@ -360,7 +360,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     const projectFair = allFairs.find(f => f.id === selectedProject.fair_id);
 
     return (
-      <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+      <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
         <div className="flex items-center gap-4">
           <button onClick={() => setSelectedProject(null)} className="text-slate-400 dark:text-app-muted hover:text-primary transition-colors">
             <ChevronRight className="w-6 h-6 rotate-180" />
@@ -489,7 +489,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   }
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Projetos Submetidos</h2>
         <div className="flex gap-2 w-full sm:w-auto">

@@ -359,7 +359,7 @@ export function FairsView({ profile }: FairsViewProps) {
 
   if (isCreating) {
     return (
-      <div className="p-4 lg:p-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto bg-background-light dark:bg-app-bg transition-colors duration-300">
         <div className="flex items-center gap-4 mb-6 lg:mb-8">
           <button onClick={() => {
             setIsCreating(false);
@@ -821,7 +821,7 @@ export function FairsView({ profile }: FairsViewProps) {
   }
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg min-h-full transition-colors duration-300">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Gestão de Feiras</h2>
         {(userRole === 'admin' || userRole === 'manager') && (
