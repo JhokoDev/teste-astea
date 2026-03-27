@@ -52,7 +52,7 @@ export function Sidebar({ activeTab, onTabChange, onClose, userRole = 'student' 
         <div className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-lg">
             <img 
-              src="logo.png" 
+              src="/logo.png" 
               alt="Logo" 
               className="w-full h-full object-contain"
               referrerPolicy="no-referrer"
