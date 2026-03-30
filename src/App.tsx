@@ -122,19 +122,21 @@ export default function App() {
           
           const { data: anyUser } = await supabase.from('users').select('*').limit(1).maybeSingle();
           const nameCol = anyUser && 'displayName' in anyUser ? 'displayName' : 
-                          anyUser && 'displayname' in anyUser ? 'displayname' : 
-                          anyUser && 'name' in anyUser ? 'name' : 'display_name';
+                          anyUser && 'display_name' in anyUser ? 'display_name' : 
+                          anyUser && 'name' in anyUser ? 'name' : 'displayname';
           const photoCol = anyUser && 'photoURL' in anyUser ? 'photoURL' :
-                           anyUser && 'photourl' in anyUser ? 'photourl' : 'photo_url';
+                           anyUser && 'photo_url' in anyUser ? 'photo_url' : 'photourl';
+          const instCol = anyUser && 'institutionId' in anyUser ? 'institutionId' :
+                          anyUser && 'institution_id' in anyUser ? 'institution_id' : 'institutionid';
 
           const insertData: any = {
             uid: authUser.id,
             email: authUser.email,
-            role: isAdminEmail ? 'admin' : 'student',
-            institution_id: 'default-inst'
+            role: isAdminEmail ? 'admin' : 'student'
           };
           insertData[nameCol] = authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
           insertData[photoCol] = authUser.user_metadata?.avatar_url;
+          insertData[instCol] = 'default-inst';
 
           const { data: newProfile, error: insertError } = await supabase.from('users').insert(insertData).select().single();
           

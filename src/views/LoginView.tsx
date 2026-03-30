@@ -119,19 +119,21 @@ export function LoginView() {
           // Determine schema dynamically
           const { data: anyUser } = await supabase.from('users').select('*').limit(1).maybeSingle();
           const nameCol = anyUser && 'displayName' in anyUser ? 'displayName' : 
-                          anyUser && 'displayname' in anyUser ? 'displayname' : 
-                          anyUser && 'name' in anyUser ? 'name' : 'display_name';
+                          anyUser && 'display_name' in anyUser ? 'display_name' : 
+                          anyUser && 'name' in anyUser ? 'name' : 'displayname';
           const photoCol = anyUser && 'photoURL' in anyUser ? 'photoURL' :
-                           anyUser && 'photourl' in anyUser ? 'photourl' : 'photo_url';
+                           anyUser && 'photo_url' in anyUser ? 'photo_url' : 'photourl';
+          const instCol = anyUser && 'institutionId' in anyUser ? 'institutionId' :
+                          anyUser && 'institution_id' in anyUser ? 'institution_id' : 'institutionid';
 
           const insertData: any = {
             uid: user.id,
             email: user.email,
-            role: role,
-            institution_id: 'default-inst'
+            role: role
           };
           insertData[nameCol] = name;
           insertData[photoCol] = null;
+          insertData[instCol] = 'default-inst';
 
           // Create user profile in Supabase table
           const { error: insertError } = await supabase.from('users').insert(insertData);

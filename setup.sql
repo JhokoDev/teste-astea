@@ -13,42 +13,42 @@ create table if not exists public.institutions (
 create table if not exists public.users (
   uid text primary key,
   email text unique not null,
-  display_name text,
-  photo_url text,
+  displayname text,
+  photourl text,
   role text default 'student', -- 'admin', 'student', 'evaluator'
-  institution_id text references public.institutions(id) default 'default-inst',
+  institutionid text references public.institutions(id) default 'default-inst',
   settings jsonb default '{"email_notifications": true, "deadline_alerts": true}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Ensure columns exist and have correct names/types in users table (Standardizing to snake_case)
+-- Ensure columns exist and have correct names/types in users table
 do $$ 
 begin 
-  -- display_name
+  -- displayname
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='displayName') then
-    alter table public.users rename column "displayName" to display_name;
-  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='displayname') then
-    alter table public.users rename column displayname to display_name;
-  elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='display_name') then
-    alter table public.users add column display_name text;
+    alter table public.users rename column "displayName" to displayname;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='display_name') then
+    alter table public.users rename column display_name to displayname;
+  elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='displayname') then
+    alter table public.users add column displayname text;
   end if;
 
-  -- photo_url
+  -- photourl
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photoURL') then
-    alter table public.users rename column "photoURL" to photo_url;
-  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photourl') then
-    alter table public.users rename column photourl to photo_url;
-  elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photo_url') then
-    alter table public.users add column photo_url text;
+    alter table public.users rename column "photoURL" to photourl;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photo_url') then
+    alter table public.users rename column photo_url to photourl;
+  elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='photourl') then
+    alter table public.users add column photourl text;
   end if;
 
-  -- institution_id
+  -- institutionid
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institutionId') then
-    alter table public.users rename column "institutionId" to institution_id;
-  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institutionid') then
-    alter table public.users rename column institutionid to institution_id;
-  elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institution_id') then
-    alter table public.users add column institution_id text references public.institutions(id) default 'default-inst';
+    alter table public.users rename column "institutionId" to institutionid;
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institution_id') then
+    alter table public.users rename column institution_id to institutionid;
+  elsif not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name='users' and column_name='institutionid') then
+    alter table public.users add column institutionid text references public.institutions(id) default 'default-inst';
   end if;
 
   -- created_at

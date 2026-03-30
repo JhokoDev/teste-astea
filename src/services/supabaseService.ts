@@ -489,10 +489,7 @@ export const evaluationsService = {
   getEvaluatorApplications: async (filters: { user_id?: string; status?: string; institution_id?: string }): Promise<ApiResponse<any[]>> => {
     let query = supabase
       .from('evaluator_applications')
-      .select(`
-        *,
-        fair:fairs!fair_id(name)
-      `);
+      .select('*');
       
     if (filters.user_id) query = query.eq('user_id', filters.user_id);
     if (filters.status) query = query.eq('status', filters.status);
@@ -500,6 +497,25 @@ export const evaluationsService = {
     const response = await safeRequest<any[]>(query);
     
     if (response.data && response.data.length > 0) {
+      // 1. Fetch Fairs manually
+      const fairIds = response.data.map(app => app.fair_id || app.fairid).filter(Boolean);
+      let fairMap: Record<string, any> = {};
+      if (fairIds.length > 0) {
+        const { data: fairs } = await supabase.from('fairs').select('id, name, institution_id').in('id', fairIds);
+        if (fairs) {
+          fairMap = fairs.reduce((acc, fair) => {
+            acc[fair.id] = fair;
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+
+      // 2. Map fair info
+      response.data = response.data.map(app => ({
+        ...app,
+        fair: fairMap[app.fair_id || app.fairid] || null
+      }));
+
       // Filter by institution_id in memory if needed
       if (filters.institution_id) {
         response.data = response.data.filter(app => 
@@ -509,7 +525,7 @@ export const evaluationsService = {
       }
 
       // Fetch users manually since we can't use a foreign key due to type mismatch (text vs uuid)
-      const userIds = response.data.map(app => app.user_id).filter(Boolean);
+      const userIds = response.data.map(app => app.user_id || app.userid).filter(Boolean);
       if (userIds.length > 0) {
         const { data: users } = await supabase
           .from('users')
@@ -527,7 +543,7 @@ export const evaluationsService = {
           
           response.data = response.data.map(app => ({
             ...app,
-            user: userMap[app.user_id] || null
+            user: userMap[app.user_id || app.userid] || null
           }));
         }
       }
@@ -602,13 +618,13 @@ export const usersService = {
     if (response.data) {
       if (filters.role === 'evaluator') {
         const { data: approvedApps } = await supabase.from('evaluator_applications').select('*').eq('status', 'aprovado');
-        const approvedUserIds = new Set(approvedApps?.map(app => app.user_id || app.userId || app.userid).filter(Boolean) || []);
+        const approvedUserIds = new Set(approvedApps?.map(app => (app.user_id || app.userId || app.userid)?.toString()).filter(Boolean) || []);
         
-        response.data = response.data.filter(user => user.role === 'evaluator' || approvedUserIds.has(user.uid));
+        response.data = response.data.filter(user => user.role === 'evaluator' || approvedUserIds.has(user.uid?.toString()));
         
         // Fix role in memory and background
         response.data.forEach(user => {
-          if (approvedUserIds.has(user.uid) && user.role !== 'evaluator') {
+          if (approvedUserIds.has(user.uid?.toString()) && user.role !== 'evaluator') {
             user.role = 'evaluator';
             supabase.from('users').update({ role: 'evaluator' }).eq('uid', user.uid).then();
           }
