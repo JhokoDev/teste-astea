@@ -72,12 +72,12 @@ export function FairsView({ profile }: FairsViewProps) {
       // Projects count
       const { data: pCounts } = await supabase
         .from('projects')
-        .select('fair_id');
+        .select('fairid');
       
       if (pCounts) {
         const pMap: Record<string, number> = {};
         pCounts.forEach(p => {
-          pMap[p.fair_id] = (pMap[p.fair_id] || 0) + 1;
+          pMap[p.fairid] = (pMap[p.fairid] || 0) + 1;
         });
         setProjectCounts(pMap);
       }
@@ -85,13 +85,13 @@ export function FairsView({ profile }: FairsViewProps) {
       // Evaluators count (approved applications)
       const { data: eCounts } = await supabase
         .from('evaluator_applications')
-        .select('fair_id')
+        .select('fairid')
         .eq('status', 'aprovado');
       
       if (eCounts) {
         const eMap: Record<string, number> = {};
         eCounts.forEach(e => {
-          eMap[e.fair_id] = (eMap[e.fair_id] || 0) + 1;
+          eMap[e.fairid] = (eMap[e.fairid] || 0) + 1;
         });
         setEvaluatorCounts(eMap);
       }
@@ -99,13 +99,13 @@ export function FairsView({ profile }: FairsViewProps) {
       // Pending Evaluators count
       const { data: peCounts } = await supabase
         .from('evaluator_applications')
-        .select('fair_id')
+        .select('fairid')
         .eq('status', 'pendente');
       
       if (peCounts) {
         const peMap: Record<string, number> = {};
         peCounts.forEach(pe => {
-          peMap[pe.fair_id] = (peMap[pe.fair_id] || 0) + 1;
+          peMap[pe.fairid] = (peMap[pe.fairid] || 0) + 1;
         });
         setPendingEvaluatorCounts(peMap);
       }
@@ -114,7 +114,7 @@ export function FairsView({ profile }: FairsViewProps) {
     const unsubscribe = fairsService.subscribeToFairs((event) => {
       const filterFair = (f: Fair) => {
         if (userRole === 'manager') {
-          return f.organizer_id === userId || f.organizer_id === null;
+          return f.organizerid === userId || f.organizerid === null;
         } else if (userRole === 'admin') {
           return true;
         } else {
@@ -235,8 +235,8 @@ export function FairsView({ profile }: FairsViewProps) {
         
         const { error } = await fairsService.createFair({
           ...formData,
-          organizer_id: profile?.uid,
-          institution_id: profile?.institution_id
+          organizerid: profile?.uid,
+          institutionid: profile?.institutionid
         });
         
         toast.dismiss(toastId);

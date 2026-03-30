@@ -120,38 +120,23 @@ export default function App() {
         if (error && error.code === 'PGRST116') { // Not found
           const isAdminEmail = authUser.email === 'admin@gmail.com' || authUser.email === 'aistudiojhoko@gmail.com';
           
-          const { data: anyUser } = await supabase.from('users').select('*').limit(1).maybeSingle();
-          const nameCol = anyUser && 'displayName' in anyUser ? 'displayName' : 
-                          anyUser && 'display_name' in anyUser ? 'display_name' : 
-                          anyUser && 'name' in anyUser ? 'name' : 'displayname';
-          const photoCol = anyUser && 'photoURL' in anyUser ? 'photoURL' :
-                           anyUser && 'photo_url' in anyUser ? 'photo_url' : 'photourl';
-          const instCol = anyUser && 'institutionId' in anyUser ? 'institutionId' :
-                          anyUser && 'institution_id' in anyUser ? 'institution_id' : 'institutionid';
-
           const insertData: any = {
             uid: authUser.id,
             email: authUser.email,
-            role: isAdminEmail ? 'admin' : 'student'
+            role: isAdminEmail ? 'admin' : 'student',
+            displayname: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+            photourl: authUser.user_metadata?.avatar_url,
+            institutionid: 'default-inst'
           };
-          insertData[nameCol] = authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
-          insertData[photoCol] = authUser.user_metadata?.avatar_url;
-          insertData[instCol] = 'default-inst';
 
           const { data: newProfile, error: insertError } = await supabase.from('users').insert(insertData).select().single();
           
           if (insertError) {
             console.error('Error creating user profile in App.tsx:', insertError);
           } else {
-            if (newProfile) {
-              newProfile.display_name = newProfile[nameCol] || newProfile.display_name;
-              newProfile.photo_url = newProfile[photoCol] || newProfile.photo_url;
-            }
             setProfile(newProfile);
           }
         } else if (userProfile) {
-          userProfile.display_name = userProfile?.display_name || userProfile?.name || userProfile?.displayName || userProfile?.displayname;
-          userProfile.photo_url = userProfile?.photo_url || userProfile?.photoURL || userProfile?.photourl;
           setProfile(userProfile);
         } else if (error) {
           console.error('Error fetching user profile in App.tsx:', error);
@@ -222,7 +207,7 @@ export default function App() {
           </div>
           
           <main className="flex-1 flex flex-col min-w-0 w-full">
-            <Header onMenuClick={() => setIsMobileSidebarOpen(true)} />
+            <Header onMenuClick={() => setIsMobileSidebarOpen(true)} profile={profile} />
             
             <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">

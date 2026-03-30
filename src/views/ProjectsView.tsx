@@ -28,21 +28,21 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     abstract: '',
     category: '',
     modality: '',
-    fair_id: '',
+    fairid: '',
     members: [],
     evidence: {
       files: [],
       links: []
     },
-    custom_data: {}
+    customdata: {}
   });
 
   useEffect(() => {
     const unsubscribeProjects = projectsService.subscribeToProjects((event) => {
       const filterProject = (p: Project) => {
         if (userRole === 'admin') return true;
-        if (userRole === 'manager') return p.institution_id === profile?.institution_id;
-        if (userRole === 'student' || userRole === 'advisor') return p.creator_id === userId || p.members.some(m => m.email === profile?.email);
+        if (userRole === 'manager') return p.institutionid === profile?.institutionid;
+        if (userRole === 'student' || userRole === 'advisor') return p.creatorid === userId || p.members.some(m => m.email === profile?.email);
         return true;
       };
 
@@ -71,7 +71,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     const unsubscribeFairs = fairsService.subscribeToFairs((event) => {
       const filterFair = (f: Fair) => {
         if (userRole === 'manager') {
-          return f.organizer_id === userId || f.organizer_id === null;
+          return f.organizerid === userId || f.organizerid === null;
         } else if (userRole === 'student' || userRole === 'advisor') {
           return f.status === 'publicado';
         }
@@ -118,7 +118,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
       unsubscribeProjects();
       unsubscribeFairs();
     };
-  }, [userRole, userId, profile?.email, profile?.institution_id]);
+  }, [userRole, userId, profile?.email, profile?.institutionid]);
 
   useEffect(() => {
     const fetchVersions = async () => {
@@ -138,7 +138,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fair_id || !formData.title || !formData.abstract) {
+    if (!formData.fairid || !formData.title || !formData.abstract) {
       toast.error('Preencha os campos obrigatórios.');
       return;
     }
@@ -147,8 +147,8 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
       setLoading(true);
       const { data, error } = await projectsService.submitProject({
         ...formData,
-        creator_id: userId,
-        institution_id: profile?.institution_id
+        creatorid: userId,
+        institutionid: profile?.institutionid
       } as any);
       
       if (error) {
@@ -163,10 +163,10 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         abstract: '',
         category: '',
         modality: '',
-        fair_id: '',
+        fairid: '',
         members: [],
         evidence: { files: [], links: [] },
-        custom_data: {}
+        customdata: {}
       });
     } catch (error: any) {
       console.error('Error submitting project:', error);
@@ -191,8 +191,8 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
             <div className="space-y-1 md:col-span-2">
               <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Selecione a Feira</label>
               <select 
-                value={formData.fair_id}
-                onChange={e => setFormData({...formData, fair_id: e.target.value, category: '', modality: ''})}
+                value={formData.fairid}
+                onChange={e => setFormData({...formData, fairid: e.target.value, category: '', modality: ''})}
                 className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
               >
                 <option value="" className="dark:bg-app-surface">Escolha uma feira ativa...</option>
@@ -228,14 +228,14 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
               <select 
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
-                disabled={!formData.fair_id}
+                disabled={!formData.fairid}
                 className={cn(
                   "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
-                  !formData.fair_id && "opacity-50 cursor-not-allowed"
+                  !formData.fairid && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <option value="" className="dark:bg-app-surface">{formData.fair_id ? 'Selecione uma categoria...' : 'Selecione uma feira primeiro'}</option>
-                {formData.fair_id && fairs.find(f => f.id === formData.fair_id)?.structure?.categories.map(cat => (
+                <option value="" className="dark:bg-app-surface">{formData.fairid ? 'Selecione uma categoria...' : 'Selecione uma feira primeiro'}</option>
+                {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.categories.map(cat => (
                   <option key={cat} value={cat} className="dark:bg-app-surface">{cat}</option>
                 ))}
               </select>
@@ -246,21 +246,21 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
               <select 
                 value={formData.modality}
                 onChange={e => setFormData({...formData, modality: e.target.value})}
-                disabled={!formData.fair_id}
+                disabled={!formData.fairid}
                 className={cn(
                   "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
-                  !formData.fair_id && "opacity-50 cursor-not-allowed"
+                  !formData.fairid && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <option value="" className="dark:bg-app-surface">{formData.fair_id ? 'Selecione uma modalidade...' : 'Selecione uma feira primeiro'}</option>
-                {formData.fair_id && fairs.find(f => f.id === formData.fair_id)?.structure?.modalities.map(mod => (
+                <option value="" className="dark:bg-app-surface">{formData.fairid ? 'Selecione uma modalidade...' : 'Selecione uma feira primeiro'}</option>
+                {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.modalities.map(mod => (
                   <option key={mod} value={mod} className="dark:bg-app-surface">{mod}</option>
                 ))}
               </select>
             </div>
 
             {/* Custom Form Fields */}
-            {formData.fair_id && fairs.find(f => f.id === formData.fair_id)?.structure?.custom_form?.map(field => (
+            {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.custom_form?.map(field => (
               <div key={field.id} className="space-y-1 md:col-span-2">
                 <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">
                   {field.label}
@@ -269,10 +269,10 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                 
                 {field.type === 'textarea' ? (
                   <textarea 
-                    value={formData.custom_data?.[field.id] || ''}
+                    value={formData.customdata?.[field.id] || ''}
                     onChange={e => setFormData({
                       ...formData, 
-                      custom_data: { ...formData.custom_data, [field.id]: e.target.value }
+                      customdata: { ...formData.customdata, [field.id]: e.target.value }
                     })}
                     required={field.required}
                     placeholder={field.placeholder}
@@ -280,10 +280,10 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                   />
                 ) : field.type === 'select' ? (
                   <select 
-                    value={formData.custom_data?.[field.id] || ''}
+                    value={formData.customdata?.[field.id] || ''}
                     onChange={e => setFormData({
                       ...formData, 
-                      custom_data: { ...formData.custom_data, [field.id]: e.target.value }
+                      customdata: { ...formData.customdata, [field.id]: e.target.value }
                     })}
                     required={field.required}
                     className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
@@ -299,15 +299,15 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                       <label key={opt} className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-app-surface rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-app-surface/80 transition-colors">
                         <input 
                           type="checkbox"
-                          checked={(formData.custom_data?.[field.id] || []).includes(opt)}
+                          checked={(formData.customdata?.[field.id] || []).includes(opt)}
                           onChange={e => {
-                            const current = formData.custom_data?.[field.id] || [];
+                            const current = formData.customdata?.[field.id] || [];
                             const next = e.target.checked 
                               ? [...current, opt]
                               : current.filter((a: string) => a !== opt);
                             setFormData({
                               ...formData, 
-                              custom_data: { ...formData.custom_data, [field.id]: next }
+                              customdata: { ...formData.customdata, [field.id]: next }
                             });
                           }}
                           className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
@@ -319,10 +319,10 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                 ) : (
                   <input 
                     type={field.type === 'link' ? 'url' : field.type}
-                    value={formData.custom_data?.[field.id] || ''}
+                    value={formData.customdata?.[field.id] || ''}
                     onChange={e => setFormData({
                       ...formData, 
-                      custom_data: { ...formData.custom_data, [field.id]: e.target.value }
+                      customdata: { ...formData.customdata, [field.id]: e.target.value }
                     })}
                     required={field.required}
                     placeholder={field.placeholder}
@@ -357,7 +357,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   }
 
   if (selectedProject) {
-    const projectFair = allFairs.find(f => f.id === selectedProject.fair_id);
+    const projectFair = allFairs.find(f => f.id === selectedProject.fairid);
 
     return (
       <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6 lg:space-y-8 bg-background-light dark:bg-app-bg transition-colors duration-300">
@@ -392,7 +392,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {projectFair.structure.custom_form.map(field => {
-                    const value = selectedProject.custom_data?.[field.id];
+                    const value = selectedProject.customdata?.[field.id];
                     if (value === undefined || value === null || value === '') return null;
 
                     return (
@@ -437,9 +437,9 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                   )}>
                     <div className="flex items-center gap-3">
                       <div className={cn("w-2 h-2 rounded-full", idx === 0 ? "bg-primary" : "bg-slate-300")} />
-                      <span className="text-sm font-bold dark:text-app-fg">v{v.version_number}</span>
+                      <span className="text-sm font-bold dark:text-app-fg">v{v.versionnumber}</span>
                       <span className="text-xs text-slate-400 dark:text-app-muted">
-                        {new Date(v.created_at).toLocaleDateString('pt-BR')}
+                        {new Date(v.createdat).toLocaleDateString('pt-BR')}
                       </span>
                       {idx === 0 && <span className="text-[10px] font-bold text-primary uppercase">Atual</span>}
                     </div>
@@ -449,7 +449,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                   <div className="flex items-center justify-between p-3 rounded-xl border border-primary bg-primary/5 dark:bg-primary/10">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-sm font-bold dark:text-app-fg">v{selectedProject.current_version}</span>
+                      <span className="text-sm font-bold dark:text-app-fg">v{selectedProject.currentversion}</span>
                       <span className="text-xs text-slate-400 dark:text-app-muted">Atual</span>
                     </div>
                     <button className="text-xs font-bold text-primary dark:text-primary-light hover:underline">Ver Arquivos</button>

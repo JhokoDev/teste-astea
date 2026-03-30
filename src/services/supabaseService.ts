@@ -58,18 +58,18 @@ async function logAction(action: string, table: string, id: string, oldData?: an
     // Get user's institution
     const { data: profile } = await supabase
       .from('users')
-      .select('institution_id')
+      .select('institutionid')
       .eq('uid', userId)
       .maybeSingle();
 
     await supabase.from('audit_logs').insert({
-      user_id: dbUserId,
+      userid: dbUserId,
       action,
-      target_table: table,
-      target_id: id,
-      old_data: oldData,
-      new_data: newData,
-      institution_id: profile?.institution_id
+      targettable: table,
+      targetid: id,
+      olddata: oldData,
+      newdata: newData,
+      institutionid: profile?.institutionid
     });
   } catch (error) {
     console.warn('Silent failure in logAction:', error);
@@ -111,9 +111,6 @@ export const fairsService = {
   },
 
   createFair: async (data: Partial<Fair>): Promise<ApiResponse<Fair>> => {
-    // Sanitize data to remove fields that are now in 'structure'
-    const { location_type, target_audience, ...sanitizedData } = data as any;
-    
     const { data: { user } } = await supabase.auth.getUser();
     
     const mockUserStr = localStorage.getItem('dev_user');
@@ -131,12 +128,12 @@ export const fairsService = {
     if (userId) {
       const { data: profile } = await supabase
         .from('users')
-        .select('institution_id')
+        .select('institutionid')
         .eq('uid', userId)
         .maybeSingle();
       
       if (profile) {
-        institutionId = profile.institution_id;
+        institutionId = profile.institutionid;
       }
     }
 
@@ -144,9 +141,9 @@ export const fairsService = {
       supabase
         .from('fairs')
         .insert({
-          ...sanitizedData,
-          organizer_id: dbUserId,
-          institution_id: institutionId
+          ...data,
+          organizerid: dbUserId,
+          institutionid: institutionId
         })
         .select()
         .single()
@@ -161,12 +158,10 @@ export const fairsService = {
   updateFair: async (id: string, data: Partial<Fair>): Promise<ApiResponse<Fair>> => {
     const { data: oldFair } = await supabase.from('fairs').select('*').eq('id', id).single();
     
-    const { location_type, target_audience, ...sanitizedData } = data as any;
-    
     const response = await safeRequest<Fair>(
       supabase
         .from('fairs')
-        .update(sanitizedData)
+        .update(data)
         .eq('id', id)
         .select()
         .single()
@@ -186,14 +181,12 @@ export const fairsService = {
     
     if (!userId) return { data: null, error: { message: 'User not authenticated' } };
 
-    const { data: profile } = await supabase.from('users').select('institution_id').eq('uid', userId).maybeSingle();
-
     const response = await safeRequest<any>(
       supabase
         .from('evaluator_applications')
         .insert({
-          fair_id: fairId,
-          user_id: userId,
+          fairid: fairId,
+          userid: userId,
           status: 'pendente'
         })
         .select()
@@ -215,12 +208,12 @@ export const fairsService = {
     let query = supabase
       .from('evaluator_applications')
       .select('id')
-      .eq('fair_id', fairId);
+      .eq('fairid', fairId);
     
     if (isMockId) {
-      query = query.is('user_id', null);
+      query = query.is('userid', null);
     } else {
-      query = query.eq('user_id', userId);
+      query = query.eq('userid', userId);
     }
 
     return safeRequest<any>(query.maybeSingle());
@@ -230,7 +223,7 @@ export const fairsService = {
     return safeRequest<any[]>(
       supabase
         .from('projects')
-        .select('fair_id')
+        .select('fairid')
     );
   },
 
@@ -239,7 +232,7 @@ export const fairsService = {
       supabase
         .from('evaluation_criteria')
         .select('*')
-        .eq('fair_id', fairId)
+        .eq('fairid', fairId)
     );
   }
 };
@@ -276,8 +269,8 @@ export const settingsService = {
     return safeRequest<any[]>(
       supabase
         .from('audit_logs')
-        .select('*')
-        .order('timestamp', { ascending: false })
+        .select('*, users:userid(displayname)')
+        .order('createdat', { ascending: false })
         .limit(limit)
     );
   },
@@ -298,12 +291,6 @@ export const settingsService = {
 
 export const projectsService = {
   subscribeToProjects: (onEvent: (event: RealtimeEvent<Project>) => void) => {
-    const mapProject = (p: any): Project => ({
-      ...p,
-      category: p.category || p.custom_data?.category || '',
-      modality: p.modality || p.custom_data?.modality || ''
-    });
-
     const fetchInitial = async () => {
       const { data, error } = await safeRequest<Project[]>(supabase.from('projects').select('*'));
       if (error) {
@@ -311,7 +298,7 @@ export const projectsService = {
         return;
       }
       if (data) {
-        onEvent({ type: 'INITIAL', data: data.map(mapProject) });
+        onEvent({ type: 'INITIAL', data });
       }
     };
 
@@ -321,11 +308,11 @@ export const projectsService = {
       .channel('projects_changes')
       .on('postgres_changes' as any, { event: '*', table: 'projects' }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
-          onEvent({ type: 'INSERT', newItem: mapProject(payload.new) });
+          onEvent({ type: 'INSERT', newItem: payload.new as Project });
         } else if (payload.eventType === 'UPDATE') {
-          onEvent({ type: 'UPDATE', newItem: mapProject(payload.new), oldItem: mapProject(payload.old) });
+          onEvent({ type: 'UPDATE', newItem: payload.new as Project, oldItem: payload.old as Project });
         } else if (payload.eventType === 'DELETE') {
-          onEvent({ type: 'DELETE', oldItem: mapProject(payload.old) });
+          onEvent({ type: 'DELETE', oldItem: payload.old as Project });
         }
       })
       .subscribe();
@@ -344,7 +331,7 @@ export const projectsService = {
     
     if (!userId) return { data: null, error: { message: 'User not authenticated' } };
 
-    const { data: profile } = await supabase.from('users').select('institution_id').eq('uid', userId).maybeSingle();
+    const { data: profile } = await supabase.from('users').select('institutionid').eq('uid', userId).maybeSingle();
 
     const response = await safeRequest<Project>(
       supabase.rpc('create_project_with_version', {
@@ -352,12 +339,12 @@ export const projectsService = {
         p_abstract: data.abstract,
         p_category: data.category || '',
         p_modality: data.modality || '',
-        p_fair_id: data.fair_id,
-        p_institution_id: profile?.institution_id || 'default-inst',
-        p_creator_id: userId,
+        p_fairid: data.fairid,
+        p_institutionid: profile?.institutionid || 'default-inst',
+        p_creatorid: userId,
         p_members: data.members || [],
         p_evidence: data.evidence || { files: [], links: [] },
-        p_custom_data: data.custom_data || {}
+        p_customdata: data.customdata || {}
       })
     );
 
@@ -375,14 +362,14 @@ export const projectsService = {
     const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
     const userId = user?.id || mockUser?.id || '00000000-0000-0000-0000-000000000000';
 
-    const newVersionNumber = (oldProject?.current_version || 1) + 1;
+    const newVersionNumber = (oldProject?.currentversion || 1) + 1;
 
     const response = await safeRequest<Project>(
       supabase
         .from('projects')
         .update({
           ...data,
-          current_version: newVersionNumber
+          currentversion: newVersionNumber
         })
         .eq('id', id)
         .select()
@@ -392,10 +379,10 @@ export const projectsService = {
     if (response.data) {
       // Create new version (RF06)
       const { error: versionError } = await supabase.from('project_versions').insert({
-        project_id: id,
-        version_number: newVersionNumber,
+        projectid: id,
+        versionnumber: newVersionNumber,
         data: response.data,
-        created_by: userId
+        createdby: userId
       });
 
       if (versionError) {
@@ -413,8 +400,8 @@ export const projectsService = {
       supabase
         .from('project_versions')
         .select('*')
-        .eq('project_id', projectId)
-        .order('version_number', { ascending: false })
+        .eq('projectid', projectId)
+        .order('versionnumber', { ascending: false })
     );
   }
 };
@@ -434,7 +421,7 @@ export const evaluationsService = {
         .from('evaluations')
         .insert({
           ...data,
-          evaluator_id: userId,
+          evaluatorid: userId,
           status: 'finalizado'
         })
         .select()
@@ -452,7 +439,7 @@ export const evaluationsService = {
       supabase
         .from('evaluations')
         .select('*')
-        .eq('evaluator_id', evaluatorId)
+        .eq('evaluatorid', evaluatorId)
     );
 
     if (response.error || !response.data) {
@@ -486,22 +473,22 @@ export const evaluationsService = {
     };
   },
 
-  getEvaluatorApplications: async (filters: { user_id?: string; status?: string; institution_id?: string }): Promise<ApiResponse<any[]>> => {
+  getEvaluatorApplications: async (filters: { userid?: string; status?: string; institutionid?: string }): Promise<ApiResponse<any[]>> => {
     let query = supabase
       .from('evaluator_applications')
       .select('*');
       
-    if (filters.user_id) query = query.eq('user_id', filters.user_id);
+    if (filters.userid) query = query.eq('userid', filters.userid);
     if (filters.status) query = query.eq('status', filters.status);
     
     const response = await safeRequest<any[]>(query);
     
     if (response.data && response.data.length > 0) {
       // 1. Fetch Fairs manually
-      const fairIds = response.data.map(app => app.fair_id || app.fairid).filter(Boolean);
+      const fairIds = response.data.map(app => app.fairid).filter(Boolean);
       let fairMap: Record<string, any> = {};
       if (fairIds.length > 0) {
-        const { data: fairs } = await supabase.from('fairs').select('id, name, institution_id').in('id', fairIds);
+        const { data: fairs } = await supabase.from('fairs').select('id, name, institutionid').in('id', fairIds);
         if (fairs) {
           fairMap = fairs.reduce((acc, fair) => {
             acc[fair.id] = fair;
@@ -513,19 +500,19 @@ export const evaluationsService = {
       // 2. Map fair info
       response.data = response.data.map(app => ({
         ...app,
-        fair: fairMap[app.fair_id || app.fairid] || null
+        fair: fairMap[app.fairid] || null
       }));
 
-      // Filter by institution_id in memory if needed
-      if (filters.institution_id) {
+      // Filter by institutionid in memory if needed
+      if (filters.institutionid) {
         response.data = response.data.filter(app => 
-          app.institution_id === filters.institution_id || 
-          (app.fair && app.fair.institution_id === filters.institution_id)
+          app.institutionid === filters.institutionid || 
+          (app.fair && app.fair.institutionid === filters.institutionid)
         );
       }
 
       // Fetch users manually since we can't use a foreign key due to type mismatch (text vs uuid)
-      const userIds = response.data.map(app => app.user_id || app.userid).filter(Boolean);
+      const userIds = response.data.map(app => app.userid).filter(Boolean);
       if (userIds.length > 0) {
         const { data: users } = await supabase
           .from('users')
@@ -534,16 +521,13 @@ export const evaluationsService = {
           
         if (users) {
           const userMap = users.reduce((acc, user) => {
-            acc[user.uid] = {
-              ...user,
-              display_name: user?.display_name || user?.name || user?.displayName || user?.displayname
-            };
+            acc[user.uid] = user;
             return acc;
           }, {} as Record<string, any>);
           
           response.data = response.data.map(app => ({
             ...app,
-            user: userMap[app.user_id || app.userid] || null
+            user: userMap[app.userid] || null
           }));
         }
       }
@@ -568,7 +552,7 @@ export const evaluationsService = {
       
       // If approved, also update the user role to evaluator if it's not already
       if (status === 'aprovado') {
-        const uid = response.data.user_id || response.data.userId || response.data.userid;
+        const uid = response.data.userid;
         if (uid) {
           await supabase.from('users').update({ role: 'evaluator' }).eq('uid', uid);
         }
@@ -582,30 +566,30 @@ export const evaluationsService = {
     const { data: apps, error: appsError } = await safeRequest<any[]>(
       supabase
         .from('evaluator_applications')
-        .select('fair_id')
-        .eq('user_id', userId)
+        .select('fairid')
+        .eq('userid', userId)
         .eq('status', 'aprovado')
     );
 
     if (appsError || !apps) return { data: [], error: appsError };
 
-    const fairIds = apps.map(a => a.fair_id);
+    const fairIds = apps.map(a => a.fairid);
     if (fairIds.length === 0) return { data: [], error: null };
 
     return safeRequest<Project[]>(
       supabase
         .from('projects')
         .select('*')
-        .in('fair_id', fairIds)
-        .neq('creator_id', userId)
+        .in('fairid', fairIds)
+        .neq('creatorid', userId)
     );
   }
 };
 
 export const usersService = {
-  getUsers: async (filters: { role?: string; institution_id?: string }): Promise<ApiResponse<any[]>> => {
+  getUsers: async (filters: { role?: string; institutionid?: string }): Promise<ApiResponse<any[]>> => {
     let query = supabase.from('users').select('*');
-    if (filters.institution_id) query = query.eq('institution_id', filters.institution_id);
+    if (filters.institutionid) query = query.eq('institutionid', filters.institutionid);
     
     // If filtering by role = 'evaluator', we should also include users who have an approved application
     // but their role wasn't updated due to a bug.
@@ -618,7 +602,7 @@ export const usersService = {
     if (response.data) {
       if (filters.role === 'evaluator') {
         const { data: approvedApps } = await supabase.from('evaluator_applications').select('*').eq('status', 'aprovado');
-        const approvedUserIds = new Set(approvedApps?.map(app => (app.user_id || app.userId || app.userid)?.toString()).filter(Boolean) || []);
+        const approvedUserIds = new Set(approvedApps?.map(app => (app.userid || app.userId)?.toString()).filter(Boolean) || []);
         
         response.data = response.data.filter(user => user.role === 'evaluator' || approvedUserIds.has(user.uid?.toString()));
         
@@ -631,11 +615,7 @@ export const usersService = {
         });
       }
       
-      response.data = response.data.map(user => ({
-        ...user,
-        display_name: user?.display_name || user?.name || user?.displayName || user?.displayname
-      }));
-      response.data.sort((a, b) => (a.display_name || '').localeCompare(b.display_name || ''));
+      response.data.sort((a, b) => (a.displayname || '').localeCompare(b.displayname || ''));
     }
     return response;
   },
@@ -658,54 +638,28 @@ export const usersService = {
   },
 
   getProfile: async (userId: string): Promise<ApiResponse<any>> => {
-    const response = await safeRequest<any>(
+    return safeRequest<any>(
       supabase
         .from('users')
         .select('*')
         .eq('uid', userId)
         .maybeSingle()
     );
-    if (response.data) {
-      response.data.display_name = response.data?.display_name || response.data?.name || response.data?.displayName || response.data?.displayname;
-      response.data.photo_url = response.data?.photo_url || response.data?.photoURL || response.data?.photourl;
-    }
-    return response;
   },
 
   updateProfile: async (userId: string, updates: any): Promise<ApiResponse<any>> => {
     const { data: oldProfile } = await supabase.from('users').select('*').eq('uid', userId).single();
     
-    const dbUpdates = { ...updates };
-    
-    if (oldProfile) {
-      if ('display_name' in dbUpdates) {
-        if ('displayName' in oldProfile) dbUpdates.displayName = dbUpdates.display_name;
-        else if ('displayname' in oldProfile) dbUpdates.displayname = dbUpdates.display_name;
-        else if ('name' in oldProfile) dbUpdates.name = dbUpdates.display_name;
-        
-        if (!('display_name' in oldProfile)) delete dbUpdates.display_name;
-      }
-      
-      if ('photo_url' in dbUpdates) {
-        if ('photoURL' in oldProfile) dbUpdates.photoURL = dbUpdates.photo_url;
-        else if ('photourl' in oldProfile) dbUpdates.photourl = dbUpdates.photo_url;
-        
-        if (!('photo_url' in oldProfile)) delete dbUpdates.photo_url;
-      }
-    }
-
     const response = await safeRequest<any>(
       supabase
         .from('users')
-        .update(dbUpdates)
+        .update(updates)
         .eq('uid', userId)
         .select()
         .single()
     );
 
     if (response.data) {
-      response.data.display_name = response.data?.display_name || response.data?.name || response.data?.displayName || response.data?.displayname;
-      response.data.photo_url = response.data?.photo_url || response.data?.photoURL || response.data?.photourl;
       await logAction('UPDATE_PROFILE', 'users', userId, oldProfile, response.data);
     }
     return response;
@@ -719,11 +673,7 @@ export const usersService = {
         return;
       }
       if (data) {
-        const mappedData = data.map(user => ({
-          ...user,
-          display_name: user?.display_name || user?.name || user?.displayName || user?.displayname
-        }));
-        onEvent({ type: 'INITIAL', data: mappedData });
+        onEvent({ type: 'INITIAL', data });
       }
     };
 
@@ -732,16 +682,12 @@ export const usersService = {
     const subscription = supabase
       .channel('users_changes')
       .on('postgres_changes' as any, { event: '*', table: 'users' }, (payload: any) => {
-        const mapUser = (user: any) => ({
-          ...user,
-          display_name: user?.name || user?.display_name
-        });
         if (payload.eventType === 'INSERT') {
-          onEvent({ type: 'INSERT', newItem: mapUser(payload.new) });
+          onEvent({ type: 'INSERT', newItem: payload.new });
         } else if (payload.eventType === 'UPDATE') {
-          onEvent({ type: 'UPDATE', newItem: mapUser(payload.new), oldItem: mapUser(payload.old) });
+          onEvent({ type: 'UPDATE', newItem: payload.new, oldItem: payload.old });
         } else if (payload.eventType === 'DELETE') {
-          onEvent({ type: 'DELETE', oldItem: mapUser(payload.old) });
+          onEvent({ type: 'DELETE', oldItem: payload.old });
         }
       })
       .subscribe();

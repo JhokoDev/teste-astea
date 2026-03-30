@@ -5,9 +5,10 @@ import { useState, useEffect } from 'react';
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  profile?: any;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, profile }: HeaderProps) {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -22,6 +23,9 @@ export function Header({ onMenuClick }: HeaderProps) {
     // If we were using a mock user, we need to reload to clear the state
     window.location.reload();
   };
+
+  const displayName = profile?.displayname || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
+  const photoUrl = profile?.photourl || user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100";
 
   return (
     <header className="flex items-center justify-between px-4 lg:px-8 py-4 bg-[#FBFDF9] dark:bg-app-card border-b border-primary/5 dark:border-app-border sticky top-0 z-50 transition-colors duration-300">
@@ -55,13 +59,19 @@ export function Header({ onMenuClick }: HeaderProps) {
           <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-app-card"></span>
         </button>
         <div className="flex items-center gap-2 lg:gap-3 pl-2 lg:pl-4 border-l border-slate-100 dark:border-app-border">
-          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 border-primary/20 dark:border-primary/40 overflow-hidden cursor-pointer hover:border-primary/40 dark:hover:border-primary/60 transition-all">
-            <img 
-              src={user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100"} 
-              alt="User profile"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
+          <div className="flex items-center gap-3 mr-2">
+            <div className="hidden sm:block text-right">
+              <p className="text-xs font-bold text-slate-900 dark:text-app-fg truncate max-w-[120px]">{displayName}</p>
+              <p className="text-[10px] text-primary font-medium uppercase tracking-wider">{profile?.role || 'Visitante'}</p>
+            </div>
+            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 border-primary/20 dark:border-primary/40 overflow-hidden cursor-pointer hover:border-primary/40 dark:hover:border-primary/60 transition-all">
+              <img 
+                src={photoUrl} 
+                alt={displayName}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
           </div>
           <button 
             onClick={handleLogout}

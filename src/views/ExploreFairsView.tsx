@@ -51,7 +51,7 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
         if (!error && counts) {
           const countMap: Record<string, number> = {};
           counts.forEach(p => {
-            countMap[p.fair_id] = (countMap[p.fair_id] || 0) + 1;
+            countMap[p.fairid] = (countMap[p.fairid] || 0) + 1;
           });
           setProjectCounts(countMap);
         }

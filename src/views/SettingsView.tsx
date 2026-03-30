@@ -17,7 +17,7 @@ export function SettingsView() {
         const { data: userProfile } = await usersService.getProfile(user.id);
 
         if (userProfile) {
-          const { data: instData } = await settingsService.getInstitutionSettings(userProfile.institution_id);
+          const { data: instData } = await settingsService.getInstitutionSettings(userProfile.institutionid);
           
           if (instData) {
             setSettings(instData.settings || {});
@@ -56,7 +56,7 @@ export function SettingsView() {
     const { data: userProfile } = await usersService.getProfile(user.id);
 
     if (userProfile) {
-      await settingsService.updateInstitutionSettings(userProfile.institution_id, newSettings);
+      await settingsService.updateInstitutionSettings(userProfile.institutionid, newSettings);
     }
   };
 
@@ -138,11 +138,11 @@ export function SettingsView() {
                   <div className="w-2 h-2 rounded-full bg-primary/40 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{log.action}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-app-muted">Por {log.user_name} em {log.target}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-app-muted">Por {log.users?.displayname || 'Sistema'} em {log.targettable}</p>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold text-slate-300 dark:text-app-muted/40 uppercase">
-                  {new Date(log.timestamp).toLocaleTimeString()}
+                  {new Date(log.createdat).toLocaleTimeString()}
                 </span>
               </div>
             )) : (

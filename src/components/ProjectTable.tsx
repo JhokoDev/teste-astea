@@ -28,7 +28,7 @@ export function ProjectTable({ projects }: { projects: Project[] }) {
                 {project.category}
               </td>
               <td className="py-4 font-bold text-slate-900 dark:text-app-fg">
-                v{project.current_version}
+                v{project.currentversion}
               </td>
               <td className="py-4">
                 <span className={cn(

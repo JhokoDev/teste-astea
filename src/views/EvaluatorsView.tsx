@@ -55,9 +55,9 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
   // Evaluation Form State
   const [evaluationData, setEvaluationData] = useState<Partial<Evaluation>>({
     scores: {},
-    criterion_feedback: {},
+    criterionfeedback: {},
     feedback: '',
-    is_conflict_declared: false
+    isconflictdeclared: false
   });
 
   useEffect(() => {
@@ -68,8 +68,8 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
           const { data: users, error } = await usersService.getUsers({});
           if (error) throw error;
           setAllUsers(users || []);
-        } else if (userRole === 'manager' && profile?.institution_id) {
-          const { data: users, error } = await usersService.getUsers({ institution_id: profile.institution_id });
+        } else if (userRole === 'manager' && profile?.institutionid) {
+          const { data: users, error } = await usersService.getUsers({ institutionid: profile.institutionid });
           if (error) throw error;
           setAllUsers(users || []);
         }
@@ -77,7 +77,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
         // Fetch evaluators
         const { data: evals, error: evalsError } = await usersService.getUsers({ 
           role: 'evaluator',
-          ...(userRole === 'manager' ? { institution_id: profile?.institution_id } : {})
+          ...(userRole === 'manager' ? { institutionid: profile?.institutionid } : {})
         });
         if (evalsError) throw evalsError;
         setEvaluators(evals || []);
@@ -100,7 +100,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
           // Fetch pending applications
           const { data: pending, error: pendingError } = await evaluationsService.getEvaluatorApplications({
             status: 'pendente',
-            ...(userRole === 'manager' ? { institution_id: profile?.institution_id } : {})
+            ...(userRole === 'manager' ? { institutionid: profile?.institutionid } : {})
           });
           if (pendingError) throw pendingError;
           setApplications(pending || []);
@@ -125,7 +125,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
       
       const filterUser = (u: any) => {
         if (userRole === 'admin') return true;
-        if (userRole === 'manager') return u.institution_id === profile?.institution_id;
+        if (userRole === 'manager') return u.institutionid === profile?.institutionid;
         return false;
       };
 
@@ -161,12 +161,12 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
     });
 
     return () => unsubscribe();
-  }, [userRole, profile?.uid, profile?.institution_id]);
+  }, [userRole, profile?.uid, profile?.institutionid]);
 
   useEffect(() => {
     const fetchCriteria = async () => {
       if (selectedProject) {
-        const { data: criteria, error } = await fairsService.getEvaluationCriteria(selectedProject.fair_id);
+        const { data: criteria, error } = await fairsService.getEvaluationCriteria(selectedProject.fairid);
         if (error) {
           toast.error('Erro ao carregar critérios.');
           return;
@@ -182,7 +182,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
             initialFeedback[c.name] = '';
           });
         }
-        setEvaluationData(prev => ({ ...prev, scores: initialScores, criterion_feedback: initialFeedback }));
+        setEvaluationData(prev => ({ ...prev, scores: initialScores, criterionfeedback: initialFeedback }));
       }
     };
     fetchCriteria();
@@ -209,14 +209,14 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
       // Refresh applications and evaluators
       const { data: pending } = await evaluationsService.getEvaluatorApplications({
         status: 'pendente',
-        ...(userRole === 'manager' ? { institution_id: profile?.institution_id } : {})
+        ...(userRole === 'manager' ? { institutionid: profile?.institutionid } : {})
       });
       setApplications(pending || []);
       setPendingEvaluators(pending?.length || 0);
 
       const { data: evals } = await usersService.getUsers({ 
         role: 'evaluator',
-        ...(userRole === 'manager' ? { institution_id: profile?.institution_id } : {})
+        ...(userRole === 'manager' ? { institutionid: profile?.institutionid } : {})
       });
       setEvaluators(evals || []);
     } catch (error: any) {
@@ -233,7 +233,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
       setLoading(true);
       const { error } = await evaluationsService.submitEvaluation({
         ...evaluationData,
-        project_id: selectedProject.id
+        projectid: selectedProject.id
       } as any);
       
       if (error) throw error;
@@ -248,7 +248,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
       toast.success('Avaliação submetida com sucesso!');
       setSelectedProject(null);
       setIsFocusMode(false);
-      setEvaluationData({ scores: {}, criterion_feedback: {}, feedback: '', is_conflict_declared: false });
+      setEvaluationData({ scores: {}, criterionfeedback: {}, feedback: '', isconflictdeclared: false });
     } catch (error: any) {
       toast.error('Erro ao submeter avaliação: ' + error.message);
     } finally {
@@ -257,7 +257,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
   };
 
   const filteredUsers = allUsers.filter(u => 
-    u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.displayname?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -340,7 +340,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase mb-2">Instituição</h4>
-                  <p className="text-sm font-bold text-slate-700 dark:text-app-fg">ID: {selectedProject.institution_id}</p>
+                  <p className="text-sm font-bold text-slate-700 dark:text-app-fg">ID: {selectedProject.institutionid}</p>
                 </div>
               </div>
             )}
@@ -356,19 +356,19 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
               </div>
             </div>
             <button 
-              onClick={() => setEvaluationData({...evaluationData, is_conflict_declared: !evaluationData.is_conflict_declared})}
+              onClick={() => setEvaluationData({...evaluationData, isconflictdeclared: !evaluationData.isconflictdeclared})}
               className={cn(
                 "px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                evaluationData.is_conflict_declared 
+                evaluationData.isconflictdeclared 
                   ? "bg-amber-600 text-white" 
                   : "bg-white dark:bg-app-surface text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30"
               )}
             >
-              {evaluationData.is_conflict_declared ? 'Conflito Declarado' : 'Declarar Conflito'}
+              {evaluationData.isconflictdeclared ? 'Conflito Declarado' : 'Declarar Conflito'}
             </button>
           </div>
 
-          {!evaluationData.is_conflict_declared && (
+          {!evaluationData.isconflictdeclared && (
             <>
               {/* Criteria (RF04, RF08, Rubrics Scoring) */}
               <div className="space-y-6">
@@ -386,11 +386,11 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                         </div>
                         <div className="text-right">
                           <span className="text-lg font-bold text-primary">{evaluationData.scores?.[criterion.name] || 0}</span>
-                          <span className="text-xs font-bold text-slate-400 dark:text-app-muted ml-1">/ {criterion.max_score}</span>
+                          <span className="text-xs font-bold text-slate-400 dark:text-app-muted ml-1">/ {criterion.maxscore}</span>
                         </div>
                       </div>
 
-                      {criterion.scale_type === 'rubric' && criterion.rubrics ? (
+                      {criterion.scaletype === 'rubric' && criterion.rubrics ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {Object.entries(criterion.rubrics).sort(([a], [b]) => Number(a) - Number(b)).map(([score, desc]) => (
                             <button
@@ -419,8 +419,8 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                           <input 
                             type="range" 
                             min="0" 
-                            max={criterion.max_score} 
-                            step={criterion.scale_type === 'numeric' ? "0.5" : "1"}
+                            max={criterion.maxscore} 
+                            step={criterion.scaletype === 'numeric' ? "0.5" : "1"}
                             value={evaluationData.scores?.[criterion.name] || 0}
                             onChange={e => setEvaluationData({
                               ...evaluationData, 
@@ -430,8 +430,8 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                           />
                           <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-app-muted uppercase">
                             <span>0</span>
-                            <span>{criterion.max_score / 2}</span>
-                            <span>{criterion.max_score}</span>
+                            <span>{criterion.maxscore / 2}</span>
+                            <span>{criterion.maxscore}</span>
                           </div>
                         </div>
                       )}
@@ -443,10 +443,10 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                           <span className="text-[10px] font-bold uppercase tracking-wider">Observação Específica</span>
                         </div>
                         <textarea 
-                          value={evaluationData.criterion_feedback?.[criterion.name] || ''}
+                          value={evaluationData.criterionfeedback?.[criterion.name] || ''}
                           onChange={e => setEvaluationData({
                             ...evaluationData,
-                            criterion_feedback: { ...evaluationData.criterion_feedback, [criterion.name]: e.target.value }
+                            criterionfeedback: { ...evaluationData.criterionfeedback, [criterion.name]: e.target.value }
                           })}
                           className="w-full bg-white dark:bg-app-surface border border-slate-200 dark:border-app-border rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-primary/20 h-20 dark:text-app-fg resize-none" 
                           placeholder={`O que você achou da ${criterion.name.toLowerCase()}?`}
@@ -552,10 +552,10 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 font-bold">
-                          {app.user?.display_name?.charAt(0) || app.user?.email?.charAt(0) || '?'}
+                          {app.user?.displayname?.charAt(0) || app.user?.email?.charAt(0) || '?'}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{app.user?.display_name || 'Usuário Desconhecido'}</p>
+                          <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{app.user?.displayname || 'Usuário Desconhecido'}</p>
                           <p className="text-xs text-slate-500 dark:text-app-muted">{app.user?.email}</p>
                           <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-wider">Feira: {app.fair?.name || 'N/A'}</p>
                         </div>
@@ -612,10 +612,10 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                              {user.display_name?.charAt(0) || user.email?.charAt(0)}
+                              {user.displayname?.charAt(0) || user.email?.charAt(0)}
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{user.display_name}</p>
+                              <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{user.displayname}</p>
                               <p className="text-xs text-slate-500 dark:text-app-muted">{user.email}</p>
                             </div>
                           </div>

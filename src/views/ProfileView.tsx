@@ -38,7 +38,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
         const mock = JSON.parse(mockUserStr);
         setUser(mock);
         setProfile(mock);
-        setDisplayName(mock.display_name || '');
+        setDisplayName(mock.displayname || '');
         setEmailNotifications(mock.settings?.email_notifications ?? true);
         setDeadlineAlerts(mock.settings?.deadline_alerts ?? true);
         return;
@@ -56,7 +56,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
 
         if (profile) {
           setProfile(profile);
-          setDisplayName(profile.display_name || '');
+          setDisplayName(profile.displayname || '');
           setEmailNotifications(profile.settings?.email_notifications ?? true);
           setDeadlineAlerts(profile.settings?.deadline_alerts ?? true);
         }
@@ -74,15 +74,15 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
         ...updates.settings
       };
 
-      const finalDisplayName = updates.display_name !== undefined ? updates.display_name : displayName;
-      const finalPhotoURL = updates.photo_url !== undefined ? updates.photo_url : profile.photo_url;
+      const finalDisplayName = updates.displayname !== undefined ? updates.displayname : displayName;
+      const finalPhotoURL = updates.photourl !== undefined ? updates.photourl : profile.photourl;
 
       if (localStorage.getItem('dev_user')) {
         const mock = JSON.parse(localStorage.getItem('dev_user')!);
         const updated = { 
           ...mock, 
-          display_name: finalDisplayName,
-          photo_url: finalPhotoURL,
+          displayname: finalDisplayName,
+          photourl: finalPhotoURL,
           settings: newSettings 
         };
         localStorage.setItem('dev_user', JSON.stringify(updated));
@@ -92,8 +92,8 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
       }
 
       const { data: updatedProfile, error } = await usersService.updateProfile(user.id, { 
-        display_name: finalDisplayName,
-        photo_url: finalPhotoURL,
+        displayname: finalDisplayName,
+        photourl: finalPhotoURL,
         settings: newSettings 
       });
 
@@ -122,7 +122,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result as string;
-      await handleUpdateProfile({ photo_url: base64String });
+      await handleUpdateProfile({ photourl: base64String });
     };
     reader.readAsDataURL(file);
   };
@@ -166,10 +166,10 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
           <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 text-center space-y-4">
             <div className="relative inline-block">
               <div className="w-24 h-24 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-primary-light font-bold text-3xl overflow-hidden border-4 border-white dark:border-app-card shadow-sm">
-                {profile.photo_url ? (
-                  <img src={profile.photo_url} alt={profile.display_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                {profile.photourl ? (
+                  <img src={profile.photourl} alt={profile.displayname} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  profile.display_name?.[0] || 'U'
+                  profile.displayname?.[0] || 'U'
                 )}
               </div>
               <label className="absolute bottom-0 right-0 p-2 bg-white dark:bg-app-surface rounded-full shadow-md border border-slate-100 dark:border-app-border text-slate-600 dark:text-app-muted hover:text-primary dark:hover:text-primary-light transition-colors cursor-pointer">
@@ -178,7 +178,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
               </label>
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-900 dark:text-app-fg">{profile.display_name}</h3>
+              <h3 className="font-bold text-lg text-slate-900 dark:text-app-fg">{profile.displayname}</h3>
               <p className="text-xs font-bold text-primary dark:text-primary-light uppercase tracking-wider">
                 {ROLE_LABELS[profile.role as UserRole] || profile.role}
               </p>
@@ -190,7 +190,7 @@ export function ProfileView({ onSimulateRole, simulatedRole, theme = 'light', on
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-app-muted">
                 <Building className="w-4 h-4 text-slate-400 dark:text-app-muted/60" />
-                <span>{profile.institution_id || 'Instituição Padrão'}</span>
+                <span>{profile.institutionid || 'Instituição Padrão'}</span>
               </div>
             </div>
           </div>

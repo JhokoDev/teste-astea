@@ -33,20 +33,20 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
       if (event.type === 'INITIAL') {
         let data = event.data;
         if (userRole === 'student' || userRole === 'advisor') {
-          data = data.filter(p => p.creator_id === userId || p.members.some(m => m.email === userId));
+          data = data.filter(p => p.creatorid === userId || p.members.some(m => m.email === userId));
         }
         setProjects(data);
       } else if (event.type === 'INSERT') {
         const p = event.newItem;
         const isVisible = (userRole !== 'student' && userRole !== 'advisor') || 
-                          (p.creator_id === userId || p.members.some(m => m.email === userId));
+                          (p.creatorid === userId || p.members.some(m => m.email === userId));
         if (isVisible) {
           setProjects(prev => [...prev, p]);
         }
       } else if (event.type === 'UPDATE') {
         const p = event.newItem;
         const isVisible = (userRole !== 'student' && userRole !== 'advisor') || 
-                          (p.creator_id === userId || p.members.some(m => m.email === userId));
+                          (p.creatorid === userId || p.members.some(m => m.email === userId));
         if (isVisible) {
           setProjects(prev => prev.map(item => item.id === p.id ? p : item));
         } else {
@@ -60,7 +60,7 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
     const unsubFairs = fairsService.subscribeToFairs((event) => {
       const filterFair = (f: Fair) => {
         if (userRole === 'manager') {
-          return f.organizer_id === userId || f.organizer_id === null;
+          return f.organizerid === userId || f.organizerid === null;
         } else if (userRole === 'admin') {
           return true;
         } else {
@@ -223,10 +223,10 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
     if (userRole === 'admin') return true;
     if (userRole === 'manager') {
       const managerFairIds = fairs.map(f => f.id);
-      return managerFairIds.includes(p.fair_id);
+      return managerFairIds.includes(p.fairid);
     }
     if (userRole === 'student' || userRole === 'advisor') {
-      return p.creator_id === userId || p.members.some(m => m.email === userId);
+      return p.creatorid === userId || p.members.some(m => m.email === userId);
     }
     if (userRole === 'evaluator') {
       // Evaluators see assigned projects (mocked for now)

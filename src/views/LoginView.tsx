@@ -6,10 +6,17 @@ import { toast } from 'sonner';
 
 export function LoginView() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+
+  // Check for recovery hash on mount
+  React.useEffect(() => {
+    if (window.location.hash.includes('type=recovery')) {
+      setMode('reset');
+    }
+  }, []);
 
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return;
@@ -43,6 +50,47 @@ export function LoginView() {
     e.preventDefault();
     if (isLoggingIn) return;
     
+    if (mode === 'forgot') {
+      if (!email) {
+        toast.error('Por favor, informe seu e-mail.');
+        return;
+      }
+      setIsLoggingIn(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/#type=recovery`,
+        });
+        if (error) throw error;
+        toast.success('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+        setMode('login');
+      } catch (error: any) {
+        toast.error(`Erro: ${error.message}`);
+      } finally {
+        setIsLoggingIn(false);
+      }
+      return;
+    }
+
+    if (mode === 'reset') {
+      if (!password) {
+        toast.error('Por favor, informe a nova senha.');
+        return;
+      }
+      setIsLoggingIn(true);
+      try {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        toast.success('Senha atualizada com sucesso!');
+        setMode('login');
+        window.location.hash = '';
+      } catch (error: any) {
+        toast.error(`Erro: ${error.message}`);
+      } finally {
+        setIsLoggingIn(false);
+      }
+      return;
+    }
+
     if (!email || !password || (mode === 'register' && !name)) {
       toast.error('Por favor, preencha todos os campos.');
       return;
@@ -116,24 +164,14 @@ export function LoginView() {
           const isAdminEmail = email === 'admin@gmail.com' || email === 'aistudiojhoko@gmail.com';
           const role = isAdminEmail ? 'admin' : 'student';
           
-          // Determine schema dynamically
-          const { data: anyUser } = await supabase.from('users').select('*').limit(1).maybeSingle();
-          const nameCol = anyUser && 'displayName' in anyUser ? 'displayName' : 
-                          anyUser && 'display_name' in anyUser ? 'display_name' : 
-                          anyUser && 'name' in anyUser ? 'name' : 'displayname';
-          const photoCol = anyUser && 'photoURL' in anyUser ? 'photoURL' :
-                           anyUser && 'photo_url' in anyUser ? 'photo_url' : 'photourl';
-          const instCol = anyUser && 'institutionId' in anyUser ? 'institutionId' :
-                          anyUser && 'institution_id' in anyUser ? 'institution_id' : 'institutionid';
-
           const insertData: any = {
             uid: user.id,
             email: user.email,
-            role: role
+            role: role,
+            displayname: name,
+            photourl: null,
+            institutionid: 'default-inst'
           };
-          insertData[nameCol] = name;
-          insertData[photoCol] = null;
-          insertData[instCol] = 'default-inst';
 
           // Create user profile in Supabase table
           const { error: insertError } = await supabase.from('users').insert(insertData);
@@ -185,7 +223,7 @@ export function LoginView() {
         <div className="flex p-1 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
           <button 
             onClick={() => setMode('login')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === 'login' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-400 dark:text-slate-500'}`}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode === 'login' || mode === 'forgot' || mode === 'reset' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary' : 'text-slate-400 dark:text-slate-500'}`}
           >
             Entrar
           </button>
@@ -221,33 +259,48 @@ export function LoginView() {
             )}
           </AnimatePresence>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase ml-1">E-mail</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
-              <input 
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all dark:text-white"
-                placeholder="exemplo@gmail.com"
-              />
+          {mode !== 'reset' && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase ml-1">E-mail</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
+                <input 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all dark:text-white"
+                  placeholder="exemplo@gmail.com"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase ml-1">Senha</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
-              <input 
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all dark:text-white"
-                placeholder="••••••••"
-              />
+          {mode !== 'forgot' && (
+            <div className="space-y-1">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">{mode === 'reset' ? 'Nova Senha' : 'Senha'}</label>
+                {mode === 'login' && (
+                  <button 
+                    type="button"
+                    onClick={() => setMode('forgot')}
+                    className="text-[10px] font-bold text-primary hover:underline"
+                  >
+                    Esqueceu a senha?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
+                <input 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary/30 transition-all dark:text-white"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <button 
             type="submit"
@@ -257,10 +310,26 @@ export function LoginView() {
             {isLoggingIn ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              mode === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />
+              mode === 'login' ? <LogIn className="w-5 h-5" /> : 
+              mode === 'register' ? <UserPlus className="w-5 h-5" /> :
+              mode === 'forgot' ? <Mail className="w-5 h-5" /> :
+              <Lock className="w-5 h-5" />
             )}
-            {mode === 'login' ? (isLoggingIn ? 'Entrando...' : 'Entrar') : (isLoggingIn ? 'Cadastrando...' : 'Criar Conta')}
+            {mode === 'login' ? (isLoggingIn ? 'Entrando...' : 'Entrar') : 
+             mode === 'register' ? (isLoggingIn ? 'Cadastrando...' : 'Criar Conta') :
+             mode === 'forgot' ? (isLoggingIn ? 'Enviando...' : 'Recuperar Senha') :
+             (isLoggingIn ? 'Redefinindo...' : 'Redefinir Senha')}
           </button>
+          
+          {(mode === 'forgot' || mode === 'reset') && (
+            <button 
+              type="button"
+              onClick={() => setMode('login')}
+              className="w-full text-center text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
+            >
+              Voltar para o Login
+            </button>
+          )}
         </form>
 
         <div className="relative">
