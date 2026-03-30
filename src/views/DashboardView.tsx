@@ -13,6 +13,7 @@ import { motion } from 'motion/react';
 import { Loader2, LayoutGrid, List } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { projectsService, fairsService, usersService, evaluationsService } from '../services/supabaseService';
+import { supabase } from '../supabase';
 import { Project, Fair, KPI, Stage, Alert, UserRole } from '../types';
 
 interface DashboardViewProps {
@@ -29,24 +30,51 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
   const [evaluatorStats, setEvaluatorStats] = useState({ completed: 0, drafts: 0, avgScore: '0.0' });
 
   useEffect(() => {
-    const unsubProjects = projectsService.subscribeToProjects((event) => {
-      if (event.type === 'INITIAL') {
-        let data = event.data;
-        if (userRole === 'student' || userRole === 'advisor') {
-          data = data.filter(p => p.creatorid === userId || p.members.some(m => m.email === userId));
+    const fetchInitialData = async () => {
+      let initialProjects: Project[] = [];
+      
+      // Fetch projects user created or is a member of
+      const { data: ownProjects } = await supabase.from('projects').select('*');
+      if (ownProjects) {
+        initialProjects = ownProjects;
+      }
+
+      // If advisor, fetch projects they advise
+      if (userRole === 'advisor' && userId) {
+        const { data: advisedProjects } = await projectsService.getAdvisorProjects(userId);
+        if (advisedProjects) {
+          // Merge and remove duplicates
+          const existingIds = new Set(initialProjects.map(p => p.id));
+          advisedProjects.forEach(p => {
+            if (!existingIds.has(p.id)) {
+              initialProjects.push(p);
+            }
+          });
         }
-        setProjects(data);
-      } else if (event.type === 'INSERT') {
+      }
+      
+      setProjects(initialProjects);
+      setLoading(false);
+    };
+
+    fetchInitialData();
+
+    const unsubProjects = projectsService.subscribeToProjects((event) => {
+      if (event.type === 'INITIAL') return;
+
+      if (event.type === 'INSERT') {
         const p = event.newItem;
-        const isVisible = (userRole !== 'student' && userRole !== 'advisor') || 
-                          (p.creatorid === userId || p.members.some(m => m.email === userId));
+        const isVisible = userRole !== 'student' || 
+                          p.creatorid === userId || 
+                          p.members.some(m => m.email === userId);
         if (isVisible) {
           setProjects(prev => [...prev, p]);
         }
       } else if (event.type === 'UPDATE') {
         const p = event.newItem;
-        const isVisible = (userRole !== 'student' && userRole !== 'advisor') || 
-                          (p.creatorid === userId || p.members.some(m => m.email === userId));
+        const isVisible = userRole !== 'student' || 
+                          p.creatorid === userId || 
+                          p.members.some(m => m.email === userId);
         if (isVisible) {
           setProjects(prev => prev.map(item => item.id === p.id ? p : item));
         } else {
@@ -226,6 +254,10 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
       return managerFairIds.includes(p.fairid);
     }
     if (userRole === 'student' || userRole === 'advisor') {
+      // For advisors, we've already merged their advised projects into the state
+      // So we can just return true for all projects in the state
+      // But for students, we still filter to be safe
+      if (userRole === 'advisor') return true;
       return p.creatorid === userId || p.members.some(m => m.email === userId);
     }
     if (userRole === 'evaluator') {

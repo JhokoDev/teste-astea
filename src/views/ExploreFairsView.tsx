@@ -19,6 +19,8 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
   const [selectedFair, setSelectedFair] = useState<Fair | null>(null);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [participation, setParticipation] = useState<any>(null);
+  const [joining, setJoining] = useState(false);
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -90,18 +92,47 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
   };
 
   useEffect(() => {
-    const checkApplication = async () => {
+    const checkStatus = async () => {
       if (!selectedFair || !profile || !profile.uid) return;
       
-      const { data, error } = await fairsService.checkEvaluatorApplication(selectedFair.id, profile.uid);
+      const [appRes, partRes] = await Promise.all([
+        fairsService.checkEvaluatorApplication(selectedFair.id, profile.uid),
+        fairsService.getFairParticipation(selectedFair.id, profile.uid)
+      ]);
       
-      if (!error) {
-        setHasApplied(!!data);
+      if (!appRes.error) {
+        setHasApplied(!!appRes.data);
+      }
+      if (!partRes.error) {
+        setParticipation(partRes.data);
       }
     };
     
-    checkApplication();
+    checkStatus();
   }, [selectedFair, profile]);
+
+  const handleJoinFair = async (role: 'advisor' | 'participant') => {
+    if (!selectedFair) return;
+    
+    try {
+      setJoining(true);
+      const { data, error } = await fairsService.joinFair(selectedFair.id, role);
+      
+      if (error) throw error;
+
+      setParticipation(data);
+      toast.success(`Você entrou na feira como ${role === 'advisor' ? 'orientador' : 'participante'}!`);
+      
+      if (role === 'participant') {
+        toast.info("Vá para a aba 'Projetos' para iniciar sua submissão.");
+      }
+    } catch (error: any) {
+      console.error('Erro ao entrar na feira:', error);
+      toast.error('Erro ao entrar na feira: ' + error.message);
+    } finally {
+      setJoining(false);
+    }
+  };
 
   const handleApplyEvaluator = async () => {
     if (!selectedFair) return;
@@ -233,18 +264,55 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
           <div className="space-y-6">
             <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
               <h3 className="text-lg font-bold dark:text-app-fg">Participar</h3>
-              <p className="text-xs text-slate-500 dark:text-app-muted">
-                Interessado nesta feira? Você pode submeter seu projeto diretamente se as inscrições estiverem abertas.
-              </p>
-              <button 
-                className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
-                onClick={() => {
-                  toast.info("Vá para a aba 'Projetos' para iniciar sua submissão nesta feira.");
-                }}
-              >
-                Submeter Projeto
-                <ExternalLink className="w-4 h-4" />
-              </button>
+              {!participation ? (
+                <>
+                  <p className="text-xs text-slate-500 dark:text-app-muted">
+                    Interessado nesta feira? Escolha como deseja participar para começar.
+                  </p>
+                  <div className="grid grid-cols-1 gap-3">
+                    <button 
+                      disabled={joining}
+                      className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                      onClick={() => handleJoinFair('participant')}
+                    >
+                      {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                      Entrar como Participante
+                    </button>
+                    <button 
+                      disabled={joining}
+                      className="w-full py-3 bg-white dark:bg-app-surface border border-primary text-primary dark:text-primary-light rounded-xl font-bold hover:bg-primary/5 dark:hover:bg-primary/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      onClick={() => handleJoinFair('advisor')}
+                    >
+                      {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                      Entrar como Orientador
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-primary/5 dark:bg-primary/10 border border-primary/10 dark:border-primary/20 rounded-xl">
+                    <p className="text-[10px] text-primary dark:text-primary-light uppercase font-bold mb-1">Seu Papel</p>
+                    <p className="text-sm font-bold text-primary dark:text-primary-light">
+                      {participation.role === 'advisor' ? 'Orientador' : 'Participante'}
+                    </p>
+                  </div>
+                  {participation.role === 'participant' ? (
+                    <button 
+                      className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
+                      onClick={() => {
+                        toast.info("Vá para a aba 'Projetos' para iniciar sua submissão nesta feira.");
+                      }}
+                    >
+                      Submeter Projeto
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-app-muted italic">
+                      Como orientador, você será notificado quando um aluno o referenciar em um projeto.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">

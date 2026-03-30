@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, History, Users, FileText, ExternalLink, ChevronRight, CheckCircle2, Loader2, Plus, Upload, AlertCircle } from 'lucide-react';
+import { Search, Filter, Download, History, Users, FileText, ExternalLink, ChevronRight, CheckCircle2, Loader2, Plus, Upload, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { projectsService, fairsService } from '../services/supabaseService';
+import { supabase } from '../supabase';
 import { Project, Fair, User } from '../types';
 import { toast } from 'sonner';
 
@@ -18,18 +19,22 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
+  const [advisorProjects, setAdvisorProjects] = useState<Project[]>([]);
+  const [pendingAdvisorLinks, setPendingAdvisorLinks] = useState<any[]>([]);
+  const [isAdvisor, setIsAdvisor] = useState(false);
 
   const userRole = profile?.role || 'student';
   const userId = profile?.uid;
 
   // Submission Form State
-  const [formData, setFormData] = useState<Partial<Project>>({
+  const [formData, setFormData] = useState<any>({
     title: '',
     abstract: '',
     category: '',
     modality: '',
     fairid: '',
     members: [],
+    advisorEmail: '',
     evidence: {
       files: [],
       links: []
@@ -136,6 +141,60 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     fetchVersions();
   }, [selectedProject]);
 
+  useEffect(() => {
+    const fetchAdvisorData = async () => {
+      if (!userId) return;
+
+      // Check if user is an advisor in any fair
+      const { data: participation } = await supabase
+        .from('fair_participants')
+        .select('role')
+        .eq('userid', userId)
+        .eq('role', 'advisor');
+      
+      const hasAdvisorRole = (participation && participation.length > 0) || userRole === 'advisor';
+      setIsAdvisor(hasAdvisorRole);
+
+      if (hasAdvisorRole) {
+        const [projectsRes, pendingRes] = await Promise.all([
+          projectsService.getAdvisorProjects(userId),
+          supabase
+            .from('project_advisors')
+            .select('*, projects:projectid(title)')
+            .eq('advisor_userid', userId)
+            .eq('status', 'pending')
+        ]);
+
+        if (!projectsRes.error) {
+          setAdvisorProjects(projectsRes.data || []);
+        }
+        if (!pendingRes.error) {
+          setPendingAdvisorLinks(pendingRes.data || []);
+        }
+      }
+    };
+
+    fetchAdvisorData();
+  }, [userId, userRole]);
+
+  const handleAdvisorAction = async (linkId: string, status: 'confirmed' | 'rejected') => {
+    try {
+      const { error } = await projectsService.updateAdvisorStatus(linkId, status);
+      if (error) throw error;
+
+      toast.success(status === 'confirmed' ? 'Vínculo confirmado!' : 'Vínculo rejeitado.');
+      
+      // Refresh data
+      setPendingAdvisorLinks(prev => prev.filter(l => l.id !== linkId));
+      if (status === 'confirmed' && userId) {
+        const { data } = await projectsService.getAdvisorProjects(userId);
+        setAdvisorProjects(data || []);
+      }
+    } catch (error: any) {
+      toast.error('Erro ao processar ação: ' + error.message);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fairid || !formData.title || !formData.abstract) {
@@ -156,6 +215,10 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         return;
       }
 
+      if (data && formData.advisorEmail) {
+        await projectsService.addProjectAdvisor(data.id, formData.advisorEmail);
+      }
+
       toast.success('Projeto submetido com sucesso!');
       setIsSubmitting(false);
       setFormData({
@@ -165,6 +228,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         modality: '',
         fairid: '',
         members: [],
+        advisorEmail: '',
         evidence: { files: [], links: [] },
         customdata: {}
       });
@@ -257,6 +321,18 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                   <option key={mod} value={mod} className="dark:bg-app-surface">{mod}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">E-mail do Orientador</label>
+              <input 
+                type="email" 
+                value={formData.advisorEmail}
+                onChange={e => setFormData({...formData, advisorEmail: e.target.value})}
+                className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                placeholder="Ex: orientador@exemplo.com" 
+              />
+              <p className="text-[10px] text-slate-400 dark:text-app-muted italic">O orientador receberá um e-mail para confirmar o vínculo com este projeto.</p>
             </div>
 
             {/* Custom Form Fields */}
@@ -503,56 +579,139 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         </div>
       </div>
 
+      {isAdvisor && pendingAdvisorLinks.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-app-fg flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-amber-500" />
+            Solicitações de Orientação Pendentes
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pendingAdvisorLinks.map(link => (
+              <div key={link.id} className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-4 border border-amber-100 dark:border-amber-900/20 flex flex-col justify-between gap-4">
+                <div>
+                  <p className="text-xs text-slate-400 dark:text-app-muted uppercase font-bold">Projeto</p>
+                  <p className="text-sm font-bold dark:text-app-fg">{link.projects?.title}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleAdvisorAction(link.id, 'confirmed')}
+                    className="flex-1 py-2 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition-colors"
+                  >
+                    Confirmar
+                  </button>
+                  <button 
+                    onClick={() => handleAdvisorAction(link.id, 'rejected')}
+                    className="flex-1 py-2 bg-slate-100 dark:bg-app-surface text-slate-600 dark:text-app-muted rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-app-surface/80 transition-colors"
+                  >
+                    Recusar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : (
-        <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl overflow-x-auto border border-transparent dark:border-app-border">
-          <table className="w-full text-left min-w-[600px]">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-app-surface border-b border-slate-100 dark:border-app-border">
-                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Projeto</th>
-                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Categoria</th>
-                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Status</th>
-                <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-app-border">
-              {projects.map((project) => (
-                <tr key={project.id} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors group">
-                  <td className="px-4 lg:px-6 py-4">
-                    <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{project.title}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-app-muted">ID: {project.id}</p>
-                  </td>
-                  <td className="px-4 lg:px-6 py-4 text-sm text-slate-600 dark:text-app-muted">{project.category}</td>
-                  <td className="px-4 lg:px-6 py-4">
-                    <span className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
-                      project.status === 'aprovado' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                    )}>
-                      {project.status || 'Pendente'}
-                    </span>
-                  </td>
-                  <td className="px-4 lg:px-6 py-4">
-                    <button 
-                      onClick={() => setSelectedProject(project)}
-                      className="text-xs font-bold text-primary dark:text-primary-light hover:underline"
-                    >
-                      Ver Detalhes
-                    </button>
-                  </td>
+        <div className="space-y-8">
+          <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl overflow-x-auto border border-transparent dark:border-app-border">
+            <table className="w-full text-left min-w-[600px]">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-app-surface border-b border-slate-100 dark:border-app-border">
+                  <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Projeto (Seus)</th>
+                  <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Categoria</th>
+                  <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Status</th>
+                  <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Ações</th>
                 </tr>
-              ))}
-              {projects.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 lg:px-6 py-20 text-center text-slate-400 dark:text-app-muted">
-                    Nenhum projeto submetido até o momento.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-app-border">
+                {projects.map((project) => (
+                  <tr key={project.id} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors group">
+                    <td className="px-4 lg:px-6 py-4">
+                      <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{project.title}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-app-muted">ID: {project.id}</p>
+                    </td>
+                    <td className="px-4 lg:px-6 py-4 text-sm text-slate-600 dark:text-app-muted">{project.category}</td>
+                    <td className="px-4 lg:px-6 py-4">
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
+                        project.status === 'aprovado' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                      )}>
+                        {project.status || 'Pendente'}
+                      </span>
+                    </td>
+                    <td className="px-4 lg:px-6 py-4">
+                      <button 
+                        onClick={() => setSelectedProject(project)}
+                        className="text-xs font-bold text-primary dark:text-primary-light hover:underline"
+                      >
+                        Ver Detalhes
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {projects.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 lg:px-6 py-10 text-center text-slate-400 dark:text-app-muted">
+                      Nenhum projeto submetido por você.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {isAdvisor && advisorProjects.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-app-fg flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-primary" />
+                Projetos que você orienta
+              </h3>
+              <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl overflow-x-auto border border-transparent dark:border-app-border">
+                <table className="w-full text-left min-w-[600px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-app-surface border-b border-slate-100 dark:border-app-border">
+                      <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Projeto</th>
+                      <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Categoria</th>
+                      <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Status</th>
+                      <th className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-400 dark:text-app-muted uppercase">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-app-border">
+                    {advisorProjects.map((project) => (
+                      <tr key={project.id} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors group">
+                        <td className="px-4 lg:px-6 py-4">
+                          <p className="text-sm font-bold text-slate-900 dark:text-app-fg">{project.title}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-app-muted">ID: {project.id}</p>
+                        </td>
+                        <td className="px-4 lg:px-6 py-4 text-sm text-slate-600 dark:text-app-muted">{project.category}</td>
+                        <td className="px-4 lg:px-6 py-4">
+                          <span className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
+                            project.status === 'aprovado' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                          )}>
+                            {project.status || 'Pendente'}
+                          </span>
+                        </td>
+                        <td className="px-4 lg:px-6 py-4">
+                          <button 
+                            onClick={() => setSelectedProject(project)}
+                            className="text-xs font-bold text-primary dark:text-primary-light hover:underline"
+                          >
+                            Ver Detalhes
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

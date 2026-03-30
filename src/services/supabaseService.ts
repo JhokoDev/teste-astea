@@ -234,6 +234,39 @@ export const fairsService = {
         .select('*')
         .eq('fairid', fairId)
     );
+  },
+
+  joinFair: async (fairId: string, role: 'advisor' | 'participant'): Promise<ApiResponse<any>> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { data: null, error: { message: 'User not authenticated' } };
+
+    const response = await safeRequest<any>(
+      supabase
+        .from('fair_participants')
+        .insert({
+          fairid: fairId,
+          userid: user.id,
+          role
+        })
+        .select()
+        .single()
+    );
+
+    if (response.data) {
+      await logAction('JOIN_FAIR', 'fair_participants', response.data.id, null, response.data);
+    }
+    return response;
+  },
+
+  getFairParticipation: async (fairId: string, userId: string): Promise<ApiResponse<any>> => {
+    return safeRequest<any>(
+      supabase
+        .from('fair_participants')
+        .select('*')
+        .eq('fairid', fairId)
+        .eq('userid', userId)
+        .maybeSingle()
+    );
   }
 };
 
@@ -403,6 +436,78 @@ export const projectsService = {
         .eq('projectid', projectId)
         .order('versionnumber', { ascending: false })
     );
+  },
+
+  addProjectAdvisor: async (projectId: string, email: string): Promise<ApiResponse<any>> => {
+    // Check if user with this email exists
+    const { data: user } = await supabase.from('users').select('uid').eq('email', email).maybeSingle();
+    
+    const response = await safeRequest<any>(
+      supabase
+        .from('project_advisors')
+        .insert({
+          projectid: projectId,
+          advisor_email: email,
+          advisor_userid: user?.uid || null,
+          status: 'pending'
+        })
+        .select()
+        .single()
+    );
+
+    if (response.data) {
+      await logAction('ADD_PROJECT_ADVISOR', 'project_advisors', response.data.id, null, response.data);
+      // TODO: Send confirmation email
+    }
+    return response;
+  },
+
+  getProjectAdvisors: async (projectId: string): Promise<ApiResponse<any[]>> => {
+    return safeRequest<any[]>(
+      supabase
+        .from('project_advisors')
+        .select('*, users:advisor_userid(displayname, photourl)')
+        .eq('projectid', projectId)
+    );
+  },
+
+  getAdvisorProjects: async (userId: string): Promise<ApiResponse<Project[]>> => {
+    // Get projects where user is a confirmed advisor
+    const { data: advisorLinks } = await safeRequest<any[]>(
+      supabase
+        .from('project_advisors')
+        .select('projectid')
+        .eq('advisor_userid', userId)
+        .eq('status', 'confirmed')
+    );
+
+    if (!advisorLinks || advisorLinks.length === 0) return { data: [], error: null };
+
+    const projectIds = advisorLinks.map(link => link.projectid);
+    
+    return safeRequest<Project[]>(
+      supabase
+        .from('projects')
+        .select('*')
+        .in('id', projectIds)
+    );
+  },
+
+  updateAdvisorStatus: async (linkId: string, status: 'confirmed' | 'rejected'): Promise<ApiResponse<any>> => {
+    const { data: oldLink } = await supabase.from('project_advisors').select('*').eq('id', linkId).single();
+    const response = await safeRequest<any>(
+      supabase
+        .from('project_advisors')
+        .update({ status })
+        .eq('id', linkId)
+        .select()
+        .single()
+    );
+
+    if (response.data) {
+      await logAction('UPDATE_ADVISOR_STATUS', 'project_advisors', linkId, oldLink, response.data);
+    }
+    return response;
   }
 };
 

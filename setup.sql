@@ -669,6 +669,15 @@ create policy "Users development policy" on public.users for all using (true) wi
 create policy "Institutions development policy" on public.institutions for all using (true) with check (true);
 create policy "Fairs development policy" on public.fairs for all using (true) with check (true);
 create policy "Projects development policy" on public.projects for all using (true) with check (true);
+
+create policy "Advisors can view projects they advise"
+  on public.projects for select
+  using (
+    exists (
+      select 1 from public.project_advisors pa 
+      where pa.projectid = id and pa.advisor_userid = auth.uid() and pa.status = 'confirmed'
+    )
+  );
 create policy "Evaluations development policy" on public.evaluations for all using (true) with check (true);
 create policy "Audit logs development policy" on public.audit_logs for all using (true) with check (true);
 create policy "Evaluator applications development policy" on public.evaluator_applications for all using (true) with check (true);
@@ -770,6 +779,65 @@ $$ language plpgsql security definer;
 
 -- Default Institution
 insert into public.institutions (id, name) values ('default-inst', 'Instituição Padrão') on conflict do nothing;
+
+-- 11. Create Fair Participants Table
+create table if not exists public.fair_participants (
+  id uuid default gen_random_uuid() primary key,
+  fairid uuid references public.fairs(id) on delete cascade,
+  userid uuid references public.users(uid) on delete cascade,
+  role text not null check (role in ('advisor', 'participant')),
+  createdat timestamp with time zone default now(),
+  unique(fairid, userid)
+);
+
+-- 12. Create Project Advisors Table
+create table if not exists public.project_advisors (
+  id uuid default gen_random_uuid() primary key,
+  projectid uuid references public.projects(id) on delete cascade,
+  advisor_email text not null,
+  advisor_userid uuid references public.users(uid) on delete set null,
+  status text default 'pending' check (status in ('pending', 'confirmed', 'rejected')),
+  createdat timestamp with time zone default now(),
+  unique(projectid, advisor_email)
+);
+
+-- Enable RLS for new tables
+alter table public.fair_participants enable row level security;
+alter table public.project_advisors enable row level security;
+
+-- RLS Policies for fair_participants
+create policy "Users can view their own fair participation"
+  on public.fair_participants for select
+  using (auth.uid() = userid);
+
+create policy "Users can join fairs"
+  on public.fair_participants for insert
+  with check (auth.uid() = userid);
+
+-- RLS Policies for project_advisors
+create policy "Advisors can view their linked projects"
+  on public.project_advisors for select
+  using (
+    auth.uid() = advisor_userid or 
+    exists (
+      select 1 from public.projects p 
+      where p.id = projectid and p.creatorid = auth.uid()
+    )
+  );
+
+create policy "Project creators can add advisors"
+  on public.project_advisors for insert
+  with check (
+    exists (
+      select 1 from public.projects p 
+      where p.id = projectid and p.creatorid = auth.uid()
+    )
+  );
+
+create policy "Advisors can update their status"
+  on public.project_advisors for update
+  using (auth.uid() = advisor_userid)
+  with check (auth.uid() = advisor_userid);
 
 -- Force schema cache refresh
 NOTIFY pgrst, 'reload schema';

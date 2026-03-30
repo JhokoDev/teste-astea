@@ -213,8 +213,13 @@ export function LoginView() {
         className="max-w-md w-full mx-auto bg-white dark:bg-[#121F1A] elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100 dark:border-slate-800"
       >
         <div className="text-center space-y-2">
-          <div className="inline-flex bg-primary rounded-2xl p-3 sm:p-4 mb-2 sm:mb-4 shadow-sm">
-            <Beaker className="text-white w-6 h-6 sm:w-8 sm:h-8" />
+          <div className="inline-flex bg-primary/10 dark:bg-primary/20 rounded-3xl p-1 mb-2 sm:mb-4 shadow-sm overflow-hidden w-20 h-20 mx-auto">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Astea Scientific</h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">Gestão Inteligente de Feiras Científicas</p>
