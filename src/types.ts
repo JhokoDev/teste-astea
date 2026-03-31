@@ -27,7 +27,7 @@ export interface Institution {
 export interface FormField {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'checkbox' | 'date' | 'file' | 'link';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'checkbox' | 'date' | 'file' | 'link' | 'section';
   required: boolean;
   options?: string[];
   placeholder?: string;

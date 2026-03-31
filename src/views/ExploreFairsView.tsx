@@ -238,13 +238,23 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
                 </p>
                 <div className="space-y-3">
                   {selectedFair.structure.custom_form.map(field => (
-                    <div key={field.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-app-surface rounded-xl border border-slate-100 dark:border-app-border">
+                    <div key={field.id} className={cn(
+                      "flex items-center justify-between p-3 rounded-xl border",
+                      field.type === 'section'
+                        ? "bg-primary/5 border-primary/20 dark:bg-primary/10 dark:border-primary/20"
+                        : "bg-slate-50 dark:bg-app-surface border-slate-100 dark:border-app-border"
+                    )}>
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold dark:text-app-fg">
+                        <span className={cn(
+                          "font-bold dark:text-app-fg",
+                          field.type === 'section' ? "text-base text-primary dark:text-primary-light" : "text-sm"
+                        )}>
                           {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
+                          {field.required && field.type !== 'section' && <span className="text-red-500 ml-1">*</span>}
                         </span>
-                        <span className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-medium">{field.type}</span>
+                        {field.type !== 'section' && (
+                          <span className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-medium">{field.type}</span>
+                        )}
                       </div>
                       {field.helpText && (
                         <div className="group relative">

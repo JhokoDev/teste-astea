@@ -310,7 +310,7 @@ export function FairsView({ profile }: FairsViewProps) {
       id: Math.random().toString(36).substr(2, 9),
       label: newField.label,
       type: newField.type as any || 'text',
-      required: !!newField.required,
+      required: newField.type === 'section' ? false : !!newField.required,
       options: newField.options || [],
       placeholder: newField.placeholder || '',
       helpText: newField.helpText || ''
@@ -637,13 +637,15 @@ export function FairsView({ profile }: FairsViewProps) {
               <div className="bg-slate-50 dark:bg-app-surface p-4 rounded-xl space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase">Rótulo do Campo</label>
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase">
+                      {newField.type === 'section' ? 'Título da Seção' : 'Rótulo do Campo'}
+                    </label>
                     <input 
                       type="text" 
                       value={newField.label}
                       onChange={e => setNewField({...newField, label: e.target.value})}
                       className="w-full bg-white dark:bg-app-card border-none rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
-                      placeholder="Ex: Link do Vídeo, Resumo Expandido..." 
+                      placeholder={newField.type === 'section' ? "Ex: Dados do Orientador" : "Ex: Link do Vídeo, Resumo Expandido..."} 
                     />
                   </div>
                   <div className="space-y-1">
@@ -661,8 +663,21 @@ export function FairsView({ profile }: FairsViewProps) {
                       <option value="checkbox">Múltipla Escolha</option>
                       <option value="file">Upload de Arquivo</option>
                       <option value="link">Link Externo</option>
+                      <option value="section">Seção (Título)</option>
                     </select>
                   </div>
+                  {newField.type === 'section' && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase">Descrição (Opcional)</label>
+                      <input 
+                        type="text" 
+                        value={newField.helpText || ''}
+                        onChange={e => setNewField({...newField, helpText: e.target.value})}
+                        className="w-full bg-white dark:bg-app-card border-none rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                        placeholder="Ex: Preencha com os dados do professor orientador do projeto." 
+                      />
+                    </div>
+                  )}
                   {(newField.type === 'select' || newField.type === 'checkbox') && (
                     <div className="space-y-1 sm:col-span-2">
                       <label className="text-[10px] font-bold text-slate-500 dark:text-app-muted uppercase">Opções (separadas por vírgula)</label>
@@ -675,23 +690,25 @@ export function FairsView({ profile }: FairsViewProps) {
                       />
                     </div>
                   )}
-                  <div className="flex items-center gap-2 pt-2">
-                    <input 
-                      type="checkbox" 
-                      id="fieldRequired"
-                      checked={newField.required}
-                      onChange={e => setNewField({...newField, required: e.target.checked})}
-                      className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
-                    />
-                    <label htmlFor="fieldRequired" className="text-xs font-bold text-slate-600 dark:text-app-muted cursor-pointer">Obrigatório</label>
-                  </div>
+                  {newField.type !== 'section' && (
+                    <div className="flex items-center gap-2 pt-2">
+                      <input 
+                        type="checkbox" 
+                        id="fieldRequired"
+                        checked={newField.required}
+                        onChange={e => setNewField({...newField, required: e.target.checked})}
+                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="fieldRequired" className="text-xs font-bold text-slate-600 dark:text-app-muted cursor-pointer">Obrigatório</label>
+                    </div>
+                  )}
                 </div>
                 <button 
                   onClick={addFormField}
                   className="w-full py-2 bg-primary/10 text-primary dark:text-primary-light rounded-lg text-xs font-bold hover:bg-primary/20 transition-all flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  Adicionar Campo ao Formulário
+                  {newField.type === 'section' ? 'Adicionar Seção' : 'Adicionar Campo ao Formulário'}
                 </button>
               </div>
 
@@ -702,17 +719,32 @@ export function FairsView({ profile }: FairsViewProps) {
                 ) : (
                   <div className="grid gap-3">
                     {formData.structure?.custom_form?.map((field, idx) => (
-                      <div key={field.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-app-surface rounded-xl border border-slate-100 dark:border-app-border">
+                      <div key={field.id} className={cn(
+                        "flex items-center justify-between p-3 rounded-xl border",
+                        field.type === 'section' 
+                          ? "bg-primary/5 border-primary/20 dark:bg-primary/10 dark:border-primary/20" 
+                          : "bg-slate-50 dark:bg-app-surface border-slate-100 dark:border-app-border"
+                      )}>
                         <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-white dark:bg-app-card rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
-                            {idx + 1}
-                          </div>
+                          {field.type !== 'section' && (
+                            <div className="w-6 h-6 bg-white dark:bg-app-card rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
+                              {idx + 1}
+                            </div>
+                          )}
                           <div>
-                            <p className="text-sm font-bold dark:text-app-fg">
+                            <p className={cn(
+                              "font-bold dark:text-app-fg",
+                              field.type === 'section' ? "text-base text-primary dark:text-primary-light" : "text-sm"
+                            )}>
                               {field.label}
-                              {field.required && <span className="text-red-500 ml-1">*</span>}
+                              {field.required && field.type !== 'section' && <span className="text-red-500 ml-1">*</span>}
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-bold">{field.type}</p>
+                            {field.type === 'section' && field.helpText && (
+                              <p className="text-xs text-slate-500 dark:text-app-muted mt-0.5">{field.helpText}</p>
+                            )}
+                            {field.type !== 'section' && (
+                              <p className="text-[10px] text-slate-400 dark:text-app-muted uppercase font-bold">{field.type}</p>
+                            )}
                           </div>
                         </div>
                         <button 

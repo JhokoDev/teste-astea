@@ -339,78 +339,93 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
             </div>
 
             {/* Custom Form Fields */}
-            {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.custom_form?.map(field => (
-              <div key={field.id} className="space-y-1 md:col-span-2">
-                <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">
-                  {field.label}
-                  {field.required && <span className="text-red-500 ml-1">*</span>}
-                </label>
-                
-                {field.type === 'textarea' ? (
-                  <textarea 
-                    value={formData.customdata?.[field.id] || ''}
-                    onChange={e => setFormData({
-                      ...formData, 
-                      customdata: { ...formData.customdata, [field.id]: e.target.value }
-                    })}
-                    required={field.required}
-                    placeholder={field.placeholder}
-                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 h-32 dark:text-app-fg"
-                  />
-                ) : field.type === 'select' ? (
-                  <select 
-                    value={formData.customdata?.[field.id] || ''}
-                    onChange={e => setFormData({
-                      ...formData, 
-                      customdata: { ...formData.customdata, [field.id]: e.target.value }
-                    })}
-                    required={field.required}
-                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
-                  >
-                    <option value="">Selecione uma opção...</option>
-                    {field.options?.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                ) : field.type === 'checkbox' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {field.options?.map(opt => (
-                      <label key={opt} className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-app-surface rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-app-surface/80 transition-colors">
-                        <input 
-                          type="checkbox"
-                          checked={(formData.customdata?.[field.id] || []).includes(opt)}
-                          onChange={e => {
-                            const current = formData.customdata?.[field.id] || [];
-                            const next = e.target.checked 
-                              ? [...current, opt]
-                              : current.filter((a: string) => a !== opt);
-                            setFormData({
-                              ...formData, 
-                              customdata: { ...formData.customdata, [field.id]: next }
-                            });
-                          }}
-                          className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
-                        />
-                        <span className="text-xs font-medium dark:text-app-fg">{opt}</span>
-                      </label>
-                    ))}
+            {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.custom_form?.map(field => {
+              if (field.type === 'section') {
+                return (
+                  <div key={field.id} className="md:col-span-2 mt-6 mb-2">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-app-fg border-b border-slate-200 dark:border-app-border pb-2">
+                      {field.label}
+                    </h3>
+                    {field.helpText && (
+                      <p className="text-sm text-slate-500 dark:text-app-muted mt-1">{field.helpText}</p>
+                    )}
                   </div>
-                ) : (
-                  <input 
-                    type={field.type === 'link' ? 'url' : field.type}
-                    value={formData.customdata?.[field.id] || ''}
-                    onChange={e => setFormData({
-                      ...formData, 
-                      customdata: { ...formData.customdata, [field.id]: e.target.value }
-                    })}
-                    required={field.required}
-                    placeholder={field.placeholder}
-                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
-                  />
-                )}
-                {field.helpText && <p className="text-[10px] text-slate-400 dark:text-app-muted italic">{field.helpText}</p>}
-              </div>
-            ))}
+                );
+              }
+
+              return (
+                <div key={field.id} className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  
+                  {field.type === 'textarea' ? (
+                    <textarea 
+                      value={formData.customdata?.[field.id] || ''}
+                      onChange={e => setFormData({
+                        ...formData, 
+                        customdata: { ...formData.customdata, [field.id]: e.target.value }
+                      })}
+                      required={field.required}
+                      placeholder={field.placeholder}
+                      className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 h-32 dark:text-app-fg"
+                    />
+                  ) : field.type === 'select' ? (
+                    <select 
+                      value={formData.customdata?.[field.id] || ''}
+                      onChange={e => setFormData({
+                        ...formData, 
+                        customdata: { ...formData.customdata, [field.id]: e.target.value }
+                      })}
+                      required={field.required}
+                      className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                    >
+                      <option value="">Selecione uma opção...</option>
+                      {field.options?.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : field.type === 'checkbox' ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {field.options?.map(opt => (
+                        <label key={opt} className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-app-surface rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-app-surface/80 transition-colors">
+                          <input 
+                            type="checkbox"
+                            checked={(formData.customdata?.[field.id] || []).includes(opt)}
+                            onChange={e => {
+                              const current = formData.customdata?.[field.id] || [];
+                              const next = e.target.checked 
+                                ? [...current, opt]
+                                : current.filter((a: string) => a !== opt);
+                              setFormData({
+                                ...formData, 
+                                customdata: { ...formData.customdata, [field.id]: next }
+                              });
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                          />
+                          <span className="text-xs font-medium dark:text-app-fg">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <input 
+                      type={field.type === 'link' ? 'url' : field.type}
+                      value={formData.customdata?.[field.id] || ''}
+                      onChange={e => setFormData({
+                        ...formData, 
+                        customdata: { ...formData.customdata, [field.id]: e.target.value }
+                      })}
+                      required={field.required}
+                      placeholder={field.placeholder}
+                      className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                    />
+                  )}
+                  {field.helpText && <p className="text-[10px] text-slate-400 dark:text-app-muted italic">{field.helpText}</p>}
+                </div>
+              );
+            })}
           </div>
 
           <div className="pt-6 flex justify-end gap-4">
@@ -471,6 +486,19 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {projectFair.structure.custom_form.map(field => {
+                    if (field.type === 'section') {
+                      return (
+                        <div key={field.id} className="md:col-span-2 mt-4 mb-1">
+                          <h4 className="text-base font-bold text-slate-800 dark:text-app-fg border-b border-slate-200 dark:border-app-border pb-1">
+                            {field.label}
+                          </h4>
+                          {field.helpText && (
+                            <p className="text-xs text-slate-500 dark:text-app-muted mt-1">{field.helpText}</p>
+                          )}
+                        </div>
+                      );
+                    }
+
                     const value = selectedProject.customdata?.[field.id];
                     if (value === undefined || value === null || value === '') return null;
 
