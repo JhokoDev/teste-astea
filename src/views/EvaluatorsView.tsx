@@ -634,7 +634,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
-                            {user.role !== 'evaluator' ? (
+                            {user.role !== 'evaluator' && user.role !== 'manager' && user.role !== 'admin' ? (
                               <button 
                                 onClick={() => handleUpdateRole(user.uid, 'evaluator')}
                                 className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
@@ -642,7 +642,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                               >
                                 <ShieldCheck className="w-4 h-4" />
                               </button>
-                            ) : (
+                            ) : user.role === 'evaluator' ? (
                               <button 
                                 onClick={() => handleUpdateRole(user.uid, 'student')}
                                 className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
@@ -650,7 +650,7 @@ export function EvaluatorsView({ profile }: EvaluatorsViewProps) {
                               >
                                 <ShieldAlert className="w-4 h-4" />
                               </button>
-                            )}
+                            ) : null}
                             <button className="p-2 text-slate-400 dark:text-app-muted hover:bg-slate-100 dark:hover:bg-app-surface rounded-lg transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
