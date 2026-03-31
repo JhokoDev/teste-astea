@@ -186,7 +186,7 @@ export function LoginView() {
             toast.success('Conta criada com sucesso! Verifique seu e-mail se necessário.');
             // Send confirmation email via Mailpit (server-side endpoint)
             try {
-              await fetch('/api/send-confirmation', {
+              await fetch('http://localhost:8080/api/send-confirmation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: insertData.email })
