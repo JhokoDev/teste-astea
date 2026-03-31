@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, Shield, Layout, ChevronRight, CheckCircle2, Clock, Loader2, Trash2, AlertCircle, ClipboardList } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
 import { Fair, EvaluationCriteria, User, FormField } from '../types';
@@ -889,43 +889,61 @@ export function FairsView({ profile }: FairsViewProps) {
                 </div>
               </div>
               <div className="flex gap-2">
-                {fair.status === 'rascunho' && (
-                  <button 
-                    onClick={async () => {
-                      const { error } = await fairsService.updateFair(fair.id, { status: 'publicado' });
-                      if (error) {
-                        toast.error('Erro ao publicar feira: ' + error.message);
-                      } else {
-                        toast.success('Feira publicada com sucesso!');
-                        setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'publicado' } : f));
-                      }
-                    }}
-                    className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all"
-                  >
-                    Publicar Agora
-                  </button>
-                )}
-                
-                {fair.status === 'publicado' && (
-                  <button 
-                    onClick={async () => {
-                      const { error } = await fairsService.updateFair(fair.id, { status: 'pausado' });
-                      if (error) {
-                        toast.error('Erro ao pausar feira: ' + error.message);
-                      } else {
-                        toast.success('Feira pausada com sucesso!');
-                        setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'pausado' } : f));
-                      }
-                    }}
-                    className="flex-1 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all"
-                  >
-                    Pausar
-                  </button>
-                )}
+                <AnimatePresence mode="popLayout">
+                  {fair.status === 'rascunho' && (
+                    <motion.button 
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                      key="btn-publicar"
+                      onClick={async () => {
+                        const { error } = await fairsService.updateFair(fair.id, { status: 'publicado' });
+                        if (error) {
+                          toast.error('Erro ao publicar feira: ' + error.message);
+                        } else {
+                          toast.success('Feira publicada com sucesso!');
+                          setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'publicado' } : f));
+                        }
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all"
+                    >
+                      Publicar Agora
+                    </motion.button>
+                  )}
+                  
+                  {fair.status === 'publicado' && (
+                    <motion.button 
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                      key="btn-pausar"
+                      onClick={async () => {
+                        const { error } = await fairsService.updateFair(fair.id, { status: 'pausado' });
+                        if (error) {
+                          toast.error('Erro ao pausar feira: ' + error.message);
+                        } else {
+                          toast.success('Feira pausada com sucesso!');
+                          setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'pausado' } : f));
+                        }
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all"
+                    >
+                      Pausar
+                    </motion.button>
+                  )}
 
-                {fair.status === 'pausado' && (
-                  <>
-                    <button 
+                  {fair.status === 'pausado' && (
+                    <motion.button 
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                      key="btn-retomar"
                       onClick={async () => {
                         const { error } = await fairsService.updateFair(fair.id, { status: 'publicado' });
                         if (error) {
@@ -938,8 +956,16 @@ export function FairsView({ profile }: FairsViewProps) {
                       className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-all"
                     >
                       Retomar
-                    </button>
-                    <button 
+                    </motion.button>
+                  )}
+                  {fair.status === 'pausado' && (
+                    <motion.button 
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                      key="btn-encerrar"
                       onClick={async () => {
                         const { error } = await fairsService.updateFair(fair.id, { status: 'encerrado' });
                         if (error) {
@@ -952,29 +978,39 @@ export function FairsView({ profile }: FairsViewProps) {
                       className="flex-1 py-2 rounded-xl bg-slate-500 text-white text-xs font-bold hover:bg-slate-600 transition-all"
                     >
                       Encerrar
-                    </button>
-                  </>
-                )}
+                    </motion.button>
+                  )}
 
-                {fair.status === 'encerrado' && (
-                  <div className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-app-surface text-slate-400 dark:text-app-muted text-xs font-bold text-center">
-                    Feira Encerrada
-                  </div>
-                )}
-                <button 
+                  {fair.status === 'encerrado' && (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                      key="btn-encerrado"
+                      className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-app-surface text-slate-400 dark:text-app-muted text-xs font-bold flex items-center justify-center"
+                    >
+                      Feira Encerrada
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <motion.button 
+                  layout
                   onClick={() => setManagingCriteriaFor(fair)}
                   className="px-3 py-2 rounded-xl border border-slate-100 dark:border-app-border text-slate-400 dark:text-app-muted hover:text-primary dark:hover:text-primary-light transition-colors"
                   title="Critérios de Avaliação"
                 >
                   <ClipboardList className="w-4 h-4" />
-                </button>
-                <button 
+                </motion.button>
+                <motion.button 
+                  layout
                   onClick={() => handleEdit(fair)}
                   className="px-3 py-2 rounded-xl border border-slate-100 dark:border-app-border text-slate-400 dark:text-app-muted hover:text-primary dark:hover:text-primary-light transition-colors"
                   title="Editar Feira"
                 >
                   <Layout className="w-4 h-4" />
-                </button>
+                </motion.button>
               </div>
             </div>
           ))}
