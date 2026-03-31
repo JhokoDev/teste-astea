@@ -114,7 +114,7 @@ export function FairsView({ profile }: FairsViewProps) {
     const unsubscribe = fairsService.subscribeToFairs((event) => {
       const filterFair = (f: Fair) => {
         if (userRole === 'manager') {
-          return f.organizerid === userId || f.organizerid === null;
+          return f.organizerid === userId || f.institutionid === profile?.institutionid;
         } else if (userRole === 'admin') {
           return true;
         } else {

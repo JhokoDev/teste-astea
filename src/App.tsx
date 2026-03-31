@@ -172,14 +172,14 @@ export default function App() {
 
   const renderView = () => {
     switch (activeTab) {
-      case 'painel': return <DashboardView userRole={effectiveRole} userId={profile?.uid} />;
+      case 'painel': return <DashboardView userRole={effectiveRole} userId={profile?.uid} profile={profile} />;
       case 'feiras': return <FairsView profile={profile} />;
       case 'explorar': return <ExploreFairsView profile={profile} />;
       case 'projetos': return <ProjectsView profile={profile} />;
       case 'avaliadores': return <EvaluatorsView profile={profile} />;
       case 'configuracoes': return <SettingsView />;
       case 'perfil': return <ProfileView onSimulateRole={handleSimulateRole} simulatedRole={simulatedRole} theme={theme} onThemeChange={handleThemeChange} />;
-      default: return <DashboardView userRole={effectiveRole} userId={profile?.uid} />;
+      default: return <DashboardView userRole={effectiveRole} userId={profile?.uid} profile={profile} />;
     }
   };
 

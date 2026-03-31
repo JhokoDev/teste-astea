@@ -14,14 +14,15 @@ import { Loader2, LayoutGrid, List } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { projectsService, fairsService, usersService, evaluationsService } from '../services/supabaseService';
 import { supabase } from '../supabase';
-import { Project, Fair, KPI, Stage, Alert, UserRole } from '../types';
+import { Project, Fair, KPI, Stage, Alert, UserRole, User } from '../types';
 
 interface DashboardViewProps {
   userRole?: UserRole;
   userId?: string;
+  profile?: User | null;
 }
 
-export function DashboardView({ userRole = 'student', userId }: DashboardViewProps) {
+export function DashboardView({ userRole = 'student', userId, profile }: DashboardViewProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -88,7 +89,7 @@ export function DashboardView({ userRole = 'student', userId }: DashboardViewPro
     const unsubFairs = fairsService.subscribeToFairs((event) => {
       const filterFair = (f: Fair) => {
         if (userRole === 'manager') {
-          return f.organizerid === userId || f.organizerid === null;
+          return f.organizerid === userId || f.institutionid === profile?.institutionid;
         } else if (userRole === 'admin') {
           return true;
         } else {

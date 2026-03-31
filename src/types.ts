@@ -91,6 +91,7 @@ export interface Project {
     links: EvidenceLink[];
   };
   customdata?: Record<string, any>;
+  advisorEmail?: string;
   currentversion: number;
   createdat: string;
 }
