@@ -3,7 +3,6 @@ import { LogIn, Beaker, ShieldCheck, Globe, Loader2, Mail, Lock, UserPlus } from
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import logoUrl from '../assets/logo.png';
 
 export function LoginView() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -216,7 +215,7 @@ export function LoginView() {
         <div className="text-center space-y-2">
           <div className="inline-flex bg-primary/10 dark:bg-primary/20 rounded-3xl p-1 mb-2 sm:mb-4 shadow-sm overflow-hidden w-20 h-20 mx-auto">
             <img 
-              src={logoUrl} 
+              src="./logo.png" 
               alt="Logo" 
               className="w-full h-full object-contain"
               referrerPolicy="no-referrer"
