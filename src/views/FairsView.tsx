@@ -230,6 +230,7 @@ export function FairsView({ profile }: FairsViewProps) {
           return;
         }
         toast.success('Feira atualizada com sucesso!');
+        setFairs(prev => prev.map(f => f.id === editingFairId ? { ...f, ...formData } as Fair : f));
       } else {
         const toastId = toast.loading('Criando feira no banco de dados...');
         
@@ -896,6 +897,7 @@ export function FairsView({ profile }: FairsViewProps) {
                         toast.error('Erro ao publicar feira: ' + error.message);
                       } else {
                         toast.success('Feira publicada com sucesso!');
+                        setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'publicado' } : f));
                       }
                     }}
                     className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all"
@@ -912,6 +914,7 @@ export function FairsView({ profile }: FairsViewProps) {
                         toast.error('Erro ao pausar feira: ' + error.message);
                       } else {
                         toast.success('Feira pausada com sucesso!');
+                        setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'pausado' } : f));
                       }
                     }}
                     className="flex-1 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all"
@@ -929,6 +932,7 @@ export function FairsView({ profile }: FairsViewProps) {
                           toast.error('Erro ao retomar feira: ' + error.message);
                         } else {
                           toast.success('Feira retomada com sucesso!');
+                          setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'publicado' } : f));
                         }
                       }}
                       className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-all"
@@ -942,6 +946,7 @@ export function FairsView({ profile }: FairsViewProps) {
                           toast.error('Erro ao encerrar feira: ' + error.message);
                         } else {
                           toast.success('Feira encerrada com sucesso!');
+                          setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'encerrado' } : f));
                         }
                       }}
                       className="flex-1 py-2 rounded-xl bg-slate-500 text-white text-xs font-bold hover:bg-slate-600 transition-all"
