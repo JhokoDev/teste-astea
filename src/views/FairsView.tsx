@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, Shield, Layout, ChevronRight, CheckCircle2, Clock, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Calendar, Shield, Layout, ChevronRight, CheckCircle2, Clock, Loader2, Trash2, AlertCircle, ClipboardList } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { fairsService } from '../services/supabaseService';
 import { Fair, EvaluationCriteria, User, FormField } from '../types';
 import { toast } from 'sonner';
 import { supabase } from '../supabase';
+import { CriteriaManagerModal } from '../components/CriteriaManagerModal';
 
 type CreationStep = 'Identidade' | 'Datas' | 'Estrutura' | 'Formulário' | 'Regras' | 'Revisão';
 
@@ -17,6 +18,7 @@ export function FairsView({ profile }: FairsViewProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingFairId, setEditingFairId] = useState<string | null>(null);
+  const [managingCriteriaFor, setManagingCriteriaFor] = useState<Fair | null>(null);
   const [currentStep, setCurrentStep] = useState<CreationStep>('Identidade');
   const [fairs, setFairs] = useState<Fair[]>([]);
   const [loading, setLoading] = useState(true);
@@ -955,6 +957,13 @@ export function FairsView({ profile }: FairsViewProps) {
                   </div>
                 )}
                 <button 
+                  onClick={() => setManagingCriteriaFor(fair)}
+                  className="px-3 py-2 rounded-xl border border-slate-100 dark:border-app-border text-slate-400 dark:text-app-muted hover:text-primary dark:hover:text-primary-light transition-colors"
+                  title="Critérios de Avaliação"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                </button>
+                <button 
                   onClick={() => handleEdit(fair)}
                   className="px-3 py-2 rounded-xl border border-slate-100 dark:border-app-border text-slate-400 dark:text-app-muted hover:text-primary dark:hover:text-primary-light transition-colors"
                   title="Editar Feira"
@@ -970,6 +979,13 @@ export function FairsView({ profile }: FairsViewProps) {
             </div>
           )}
         </div>
+      )}
+
+      {managingCriteriaFor && (
+        <CriteriaManagerModal 
+          fair={managingCriteriaFor} 
+          onClose={() => setManagingCriteriaFor(null)} 
+        />
       )}
     </div>
   );

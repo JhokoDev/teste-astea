@@ -238,6 +238,36 @@ export const fairsService = {
     );
   },
 
+  createEvaluationCriteria: async (criteria: Partial<EvaluationCriteria>): Promise<ApiResponse<EvaluationCriteria>> => {
+    return safeRequest<EvaluationCriteria>(
+      supabase
+        .from('evaluation_criteria')
+        .insert([criteria])
+        .select()
+        .single()
+    );
+  },
+
+  updateEvaluationCriteria: async (id: string, updates: Partial<EvaluationCriteria>): Promise<ApiResponse<EvaluationCriteria>> => {
+    return safeRequest<EvaluationCriteria>(
+      supabase
+        .from('evaluation_criteria')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+    );
+  },
+
+  deleteEvaluationCriteria: async (id: string): Promise<ApiResponse<null>> => {
+    return safeRequest<null>(
+      supabase
+        .from('evaluation_criteria')
+        .delete()
+        .eq('id', id)
+    );
+  },
+
   joinFair: async (fairId: string, role: 'advisor' | 'participant'): Promise<ApiResponse<any>> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { data: null, error: { message: 'User not authenticated' } };
