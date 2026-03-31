@@ -184,6 +184,16 @@ export function LoginView() {
             toast.warning(`Conta criada, mas houve um erro ao salvar seu perfil: ${insertError.message}. Tente entrar novamente.`);
           } else {
             toast.success('Conta criada com sucesso! Verifique seu e-mail se necessário.');
+            // Send confirmation email via Mailpit (server-side endpoint)
+            try {
+              await fetch('/api/send-confirmation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: insertData.email })
+              });
+            } catch (e) {
+              console.warn('Failed to send confirmation email:', e);
+            }
           }
         }
       }

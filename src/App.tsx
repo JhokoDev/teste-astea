@@ -135,6 +135,16 @@ export default function App() {
             console.error('Error creating user profile in App.tsx:', insertError);
           } else {
             setProfile(newProfile);
+            // Send confirmation email via Mailpit (server-side endpoint)
+            try {
+              await fetch('/api/send-confirmation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: insertData.email })
+              });
+            } catch (e) {
+              console.warn('Failed to send confirmation email:', e);
+            }
           }
         } else if (userProfile) {
           setProfile(userProfile);
