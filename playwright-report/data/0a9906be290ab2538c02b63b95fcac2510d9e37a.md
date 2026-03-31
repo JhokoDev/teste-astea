@@ -1,0 +1,128 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - region "Notifications alt+T"
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img "Logo" [ref=e9]
+        - generic [ref=e10]:
+          - heading "Astea Scientific" [level=1] [ref=e11]
+          - paragraph [ref=e12]: Plataforma
+      - navigation [ref=e13]:
+        - button "Painel" [ref=e14]:
+          - img [ref=e15]
+          - paragraph [ref=e20]: Painel
+        - button "Feiras" [ref=e21]:
+          - img [ref=e22]
+          - paragraph [ref=e24]: Feiras
+        - button "Explorar Feiras" [ref=e25]:
+          - img [ref=e26]
+          - paragraph [ref=e28]: Explorar Feiras
+        - button "Projetos" [ref=e29]:
+          - img [ref=e30]
+          - paragraph [ref=e33]: Projetos
+        - button "Avaliadores" [ref=e34]:
+          - img [ref=e35]
+          - paragraph [ref=e40]: Avaliadores
+        - button "Configurações" [ref=e41]:
+          - img [ref=e42]
+          - paragraph [ref=e45]: Configurações
+    - generic [ref=e46]:
+      - button "Meu Perfil" [ref=e47]:
+        - img [ref=e48]
+        - generic [ref=e52]: Meu Perfil
+      - button "Sair da Conta" [ref=e53]:
+        - img [ref=e54]
+        - generic [ref=e57]: Sair da Conta
+      - button "Recolher" [ref=e58]:
+        - img [ref=e59]
+        - generic [ref=e62]: Recolher
+  - main [ref=e63]:
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - navigation [ref=e66]:
+          - generic [ref=e67] [cursor=pointer]: Feiras
+          - img [ref=e68]
+          - generic [ref=e70]: Nome da Feira
+        - generic [ref=e71]:
+          - img [ref=e72]
+          - textbox "Search" [ref=e75]
+      - generic [ref=e76]:
+        - button [ref=e77]:
+          - img [ref=e78]
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - paragraph [ref=e85]: Usuário
+              - paragraph [ref=e86]: admin
+            - img "Usuário" [ref=e88] [cursor=pointer]
+          - button "Sair" [ref=e89]:
+            - img [ref=e90]
+    - generic [ref=e95]:
+      - generic [ref=e96]:
+        - button [ref=e97]:
+          - img [ref=e98]
+        - heading "Configurar Nova Feira" [level=2] [ref=e100]
+      - generic [ref=e101]:
+        - generic [ref=e103]:
+          - generic [ref=e104]: "1"
+          - generic [ref=e105]: Identidade
+        - generic [ref=e106]:
+          - generic [ref=e107]: "2"
+          - generic [ref=e108]: Datas
+        - generic [ref=e109]:
+          - generic [ref=e110]: "3"
+          - generic [ref=e111]: Estrutura
+        - generic [ref=e112]:
+          - generic [ref=e113]: "4"
+          - generic [ref=e114]: Formulário
+        - generic [ref=e115]:
+          - generic [ref=e116]: "5"
+          - generic [ref=e117]: Regras
+        - generic [ref=e118]:
+          - generic [ref=e119]: "6"
+          - generic [ref=e120]: Revisão
+      - generic [ref=e121]:
+        - generic [ref=e122]:
+          - heading "Identidade da Feira (RF01)" [level=3] [ref=e123]
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - text: Nome da Feira
+              - 'textbox "Ex: Feira de Inovação Bio-Tech 2026" [ref=e126]': Feira de Teste Automatizado
+            - generic [ref=e127]:
+              - text: Descrição
+              - textbox "Descreva os objetivos da feira..." [ref=e128]: Esta é uma feira criada por um teste E2E.
+            - generic [ref=e129]:
+              - generic [ref=e130]:
+                - text: Público-Alvo
+                - generic [ref=e131]:
+                  - generic [ref=e132] [cursor=pointer]:
+                    - checkbox "Ensino Fundamental" [checked] [ref=e133]
+                    - generic [ref=e134]: Ensino Fundamental
+                  - generic [ref=e135] [cursor=pointer]:
+                    - checkbox "Ensino Médio" [checked] [ref=e136]
+                    - generic [ref=e137]: Ensino Médio
+                  - generic [ref=e138] [cursor=pointer]:
+                    - checkbox "Ensino Técnico" [checked] [ref=e139]
+                    - generic [ref=e140]: Ensino Técnico
+                  - generic [ref=e141] [cursor=pointer]:
+                    - checkbox "Ensino Superior" [checked] [ref=e142]
+                    - generic [ref=e143]: Ensino Superior
+                  - generic [ref=e144] [cursor=pointer]:
+                    - checkbox "Aberto a todos" [checked] [ref=e145]
+                    - generic [ref=e146]: Aberto a todos
+              - generic [ref=e147]:
+                - text: Modalidade de Local
+                - combobox [ref=e148]:
+                  - option "Híbrido" [selected]
+                  - option "Presencial"
+                  - option "Online"
+        - generic [ref=e149]:
+          - button "Anterior" [ref=e150]
+          - button "Próximo" [ref=e151]
+  - button "Nova Etapa" [ref=e152]:
+    - img [ref=e153]
+    - generic [ref=e154]: Nova Etapa
+```

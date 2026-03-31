@@ -1,0 +1,91 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - region "Notifications alt+T"
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img "Logo" [ref=e9]
+        - generic [ref=e10]:
+          - heading "Astea Scientific" [level=1] [ref=e11]
+          - paragraph [ref=e12]: Plataforma
+      - navigation [ref=e13]:
+        - button "Painel" [ref=e14]:
+          - img [ref=e15]
+          - paragraph [ref=e20]: Painel
+        - button "Explorar Feiras" [ref=e21]:
+          - img [ref=e22]
+          - paragraph [ref=e24]: Explorar Feiras
+        - button "Projetos" [ref=e25]:
+          - img [ref=e26]
+          - paragraph [ref=e29]: Projetos
+    - generic [ref=e30]:
+      - button "Meu Perfil" [ref=e31]:
+        - img [ref=e32]
+        - generic [ref=e36]: Meu Perfil
+      - button "Sair da Conta" [ref=e37]:
+        - img [ref=e38]
+        - generic [ref=e41]: Sair da Conta
+      - button "Recolher" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e46]: Recolher
+  - main [ref=e47]:
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - navigation [ref=e50]:
+          - generic [ref=e51] [cursor=pointer]: Feiras
+          - img [ref=e52]
+          - generic [ref=e54]: Nome da Feira
+        - generic [ref=e55]:
+          - img [ref=e56]
+          - textbox "Search" [ref=e59]
+      - generic [ref=e60]:
+        - button [ref=e61]:
+          - img [ref=e62]
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - paragraph [ref=e69]: Usuário
+              - paragraph [ref=e70]: student
+            - img "Usuário" [ref=e72] [cursor=pointer]
+          - button "Sair" [ref=e73]:
+            - img [ref=e74]
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - button [ref=e81]:
+          - img [ref=e82]
+        - heading "Submeter Novo Projeto (RF05)" [level=2] [ref=e84]
+      - generic [ref=e85]:
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - text: Selecione a Feira
+            - combobox [ref=e88]:
+              - option "Escolha uma feira ativa..." [selected]
+              - option "Viva Ciencia"
+              - option "teste"
+          - generic [ref=e89]:
+            - text: Título do Projeto
+            - 'textbox "Ex: Sistema de Purificação de Água com Grafeno" [ref=e90]'
+          - generic [ref=e91]:
+            - text: Resumo (Abstract)
+            - textbox "Descreva seu projeto detalhadamente..." [ref=e92]
+          - generic [ref=e93]:
+            - text: Categoria
+            - combobox [disabled] [ref=e94]:
+              - option "Selecione uma feira primeiro" [selected]
+          - generic [ref=e95]:
+            - text: Modalidade
+            - combobox [disabled] [ref=e96]:
+              - option "Selecione uma feira primeiro" [selected]
+          - generic [ref=e97]:
+            - text: E-mail do Orientador
+            - 'textbox "Ex: orientador@exemplo.com" [ref=e98]'
+            - paragraph [ref=e99]: O orientador receberá um e-mail para confirmar o vínculo com este projeto.
+        - generic [ref=e100]:
+          - button "Cancelar" [ref=e101]
+          - button "Submeter Projeto" [ref=e102]
+  - button "Nova Etapa" [ref=e103]:
+    - img [ref=e104]
+    - generic [ref=e105]: Nova Etapa
+```
