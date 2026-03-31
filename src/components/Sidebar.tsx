@@ -13,7 +13,6 @@ import {
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
 import { UserRole } from '../types';
-import logoUrl from '../assets/logo.png';
 
 export type TabId = 'painel' | 'feiras' | 'explorar' | 'projetos' | 'avaliadores' | 'configuracoes' | 'perfil';
 
@@ -53,7 +52,7 @@ export function Sidebar({ activeTab, onTabChange, onClose, userRole = 'student' 
         <div className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-lg">
             <img 
-              src={logoUrl} 
+              src="/logo.png" 
               alt="Logo" 
               className="w-full h-full object-contain"
               referrerPolicy="no-referrer"
