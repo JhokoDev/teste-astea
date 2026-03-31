@@ -52,7 +52,8 @@ async function logAction(action: string, table: string, id: string, oldData?: an
     const isMockId = userId?.startsWith('00000000') || 
                      userId?.startsWith('11111111') || 
                      userId?.startsWith('22222222') || 
-                     userId === 'dev-admin-id';
+                     userId === 'dev-admin-id' ||
+                     userId === 'd3b07384-d9a4-4475-9c8a-4d6a7828f45a';
     const dbUserId = isMockId ? null : userId;
 
     // Get user's institution
@@ -120,7 +121,8 @@ export const fairsService = {
     const isMockId = userId?.startsWith('00000000') || 
                      userId?.startsWith('11111111') || 
                      userId?.startsWith('22222222') || 
-                     userId === 'dev-admin-id';
+                     userId === 'dev-admin-id' ||
+                     userId === 'd3b07384-d9a4-4475-9c8a-4d6a7828f45a';
     const dbUserId = isMockId ? null : userId;
 
     // Get user's institution
@@ -142,8 +144,8 @@ export const fairsService = {
         .from('fairs')
         .insert({
           ...data,
-          organizerid: dbUserId,
-          institutionid: institutionId
+          organizerid: isMockId ? null : (data.organizerid || dbUserId),
+          institutionid: data.institutionid || institutionId
         })
         .select()
         .single()
@@ -364,6 +366,13 @@ export const projectsService = {
     
     if (!userId) return { data: null, error: { message: 'User not authenticated' } };
 
+    const isMockId = userId?.startsWith('00000000') || 
+                     userId?.startsWith('11111111') || 
+                     userId?.startsWith('22222222') || 
+                     userId === 'dev-admin-id' ||
+                     userId === 'd3b07384-d9a4-4475-9c8a-4d6a7828f45a';
+    const dbUserId = isMockId ? null : userId;
+
     const { data: profile } = await supabase.from('users').select('institutionid').eq('uid', userId).maybeSingle();
 
     const response = await safeRequest<Project>(
@@ -374,7 +383,7 @@ export const projectsService = {
         p_modality: data.modality || '',
         p_fairid: data.fairid,
         p_institutionid: profile?.institutionid || 'default-inst',
-        p_creatorid: userId,
+        p_creatorid: dbUserId,
         p_members: data.members || [],
         p_evidence: data.evidence || { files: [], links: [] },
         p_customdata: data.customdata || {}

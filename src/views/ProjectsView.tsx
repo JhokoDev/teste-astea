@@ -215,8 +215,11 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         return;
       }
 
-      if (data && formData.advisorEmail) {
-        await projectsService.addProjectAdvisor(data.id, formData.advisorEmail);
+      if (data) {
+        setProjects(prev => [data, ...prev]);
+        if (data.advisorEmail) {
+          await projectsService.addProjectAdvisor(data.id, data.advisorEmail);
+        }
       }
 
       toast.success('Projeto submetido com sucesso!');

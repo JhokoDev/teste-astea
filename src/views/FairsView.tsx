@@ -218,7 +218,6 @@ export function FairsView({ profile }: FairsViewProps) {
     try {
       setLoading(true);
       if (isEditing && editingFairId) {
-        console.log('FairsView: Iniciando atualização de feira:', formData);
         const toastId = toast.loading('Atualizando feira no banco de dados...');
         
         const { error } = await fairsService.updateFair(editingFairId, formData);
@@ -230,10 +229,9 @@ export function FairsView({ profile }: FairsViewProps) {
         }
         toast.success('Feira atualizada com sucesso!');
       } else {
-        console.log('FairsView: Iniciando criação de feira:', formData);
         const toastId = toast.loading('Criando feira no banco de dados...');
         
-        const { error } = await fairsService.createFair({
+        const { data: newFair, error } = await fairsService.createFair({
           ...formData,
           organizerid: profile?.uid,
           institutionid: profile?.institutionid
@@ -244,6 +242,11 @@ export function FairsView({ profile }: FairsViewProps) {
           toast.error(`Erro ao criar feira: ${error.message}`);
           return;
         }
+
+        if (newFair) {
+          setFairs(prev => [newFair as Fair, ...prev]);
+        }
+        
         toast.success('Feira criada com sucesso!');
       }
       
