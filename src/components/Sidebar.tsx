@@ -13,7 +13,8 @@ import {
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
 import { UserRole } from '../types';
-import logoUrl from '../assets/logo.png';
+
+const logoUrl = '/logo.png'; // Caminho estático para evitar erro de build do Vite
 
 export type TabId = 'painel' | 'feiras' | 'explorar' | 'projetos' | 'avaliadores' | 'configuracoes' | 'perfil';
 

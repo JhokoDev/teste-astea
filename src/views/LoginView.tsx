@@ -3,7 +3,8 @@ import { LogIn, Beaker, ShieldCheck, Globe, Loader2, Mail, Lock, UserPlus } from
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import logoUrl from '../assets/logo.png';
+
+const logoUrl = '/logo.png'; // Caminho estático para evitar erro de build do Vite
 
 export function LoginView() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
