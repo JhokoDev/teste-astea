@@ -25,6 +25,7 @@ export function FairsView({ profile }: FairsViewProps) {
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
   const [evaluatorCounts, setEvaluatorCounts] = useState<Record<string, number>>({});
   const [pendingEvaluatorCounts, setPendingEvaluatorCounts] = useState<Record<string, number>>({});
+  const [fairToDelete, setFairToDelete] = useState<Fair | null>(null);
 
   const [newField, setNewField] = useState<Partial<FormField>>({
     label: '',
@@ -982,17 +983,40 @@ export function FairsView({ profile }: FairsViewProps) {
                   )}
 
                   {fair.status === 'encerrado' && (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.2 }}
-                      key="btn-encerrado"
-                      className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-app-surface text-slate-400 dark:text-app-muted text-xs font-bold flex items-center justify-center"
-                    >
-                      Feira Encerrada
-                    </motion.div>
+                    <>
+                      <motion.button 
+                        layout
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        key="btn-rascunho"
+                        onClick={async () => {
+                          const { error } = await fairsService.updateFair(fair.id, { status: 'rascunho' });
+                          if (error) {
+                            toast.error('Erro ao voltar para rascunho: ' + error.message);
+                          } else {
+                            toast.success('Feira voltou para rascunho!');
+                            setFairs(prev => prev.map(f => f.id === fair.id ? { ...f, status: 'rascunho' } : f));
+                          }
+                        }}
+                        className="flex-1 py-2 rounded-xl bg-slate-200 dark:bg-app-surface text-slate-600 dark:text-app-muted text-xs font-bold hover:bg-slate-300 dark:hover:bg-app-surface/80 transition-all"
+                      >
+                        Voltar para Rascunho
+                      </motion.button>
+                      <motion.button 
+                        layout
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        key="btn-excluir"
+                        onClick={() => setFairToDelete(fair)}
+                        className="flex-1 py-2 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-all"
+                      >
+                        Excluir
+                      </motion.button>
+                    </>
                   )}
                 </AnimatePresence>
                 <motion.button 
@@ -1027,6 +1051,50 @@ export function FairsView({ profile }: FairsViewProps) {
           fair={managingCriteriaFor} 
           onClose={() => setManagingCriteriaFor(null)} 
         />
+      )}
+
+      {fairToDelete && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-app-surface rounded-2xl p-6 max-w-md w-full shadow-xl"
+          >
+            <div className="flex items-center gap-3 text-red-500 mb-4">
+              <AlertCircle className="w-6 h-6" />
+              <h3 className="text-lg font-bold">Excluir Feira</h3>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300 mb-6">
+              Tem certeza que deseja excluir a feira <strong>{fairToDelete.name}</strong>? Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setFairToDelete(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-app-border text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-app-surface/80 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={async () => {
+                  const toastId = toast.loading('Excluindo feira...');
+                  const { error } = await fairsService.deleteFair(fairToDelete.id);
+                  toast.dismiss(toastId);
+                  if (error) {
+                    toast.error('Erro ao excluir feira: ' + error.message);
+                  } else {
+                    toast.success('Feira excluída com sucesso!');
+                    setFairs(prev => prev.filter(f => f.id !== fairToDelete.id));
+                    setFairToDelete(null);
+                  }
+                }}
+                className="flex-1 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
+              >
+                Sim, Excluir
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );

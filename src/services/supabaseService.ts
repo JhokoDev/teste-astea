@@ -175,6 +175,22 @@ export const fairsService = {
     return response;
   },
 
+  deleteFair: async (id: string): Promise<ApiResponse<null>> => {
+    const { data: oldFair } = await supabase.from('fairs').select('*').eq('id', id).single();
+    
+    const response = await safeRequest<null>(
+      supabase
+        .from('fairs')
+        .delete()
+        .eq('id', id)
+    );
+
+    if (!response.error && oldFair) {
+      await logAction('DELETE_FAIR', 'fairs', id, oldFair, null);
+    }
+    return response;
+  },
+
   applyAsEvaluator: async (fairId: string): Promise<ApiResponse<any>> => {
     const { data: { user } } = await supabase.auth.getUser();
     const mockUserStr = localStorage.getItem('dev_user');
