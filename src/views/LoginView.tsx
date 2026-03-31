@@ -207,11 +207,11 @@ export function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#FBFDF9] dark:bg-[#0A120F] p-4 transition-colors duration-300">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#FBFDF9] dark:bg-[#121212] p-4 transition-colors duration-300">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full mx-auto bg-white dark:bg-[#121F1A] elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100 dark:border-slate-800"
+        className="max-w-md w-full mx-auto bg-white dark:bg-[#212121] elevation-1 rounded-3xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-slate-100 dark:border-[#424242]"
       >
         <div className="text-center space-y-2">
           <div className="inline-flex bg-primary/10 dark:bg-primary/20 rounded-3xl p-1 mb-2 sm:mb-4 shadow-sm overflow-hidden w-20 h-20 mx-auto">
@@ -340,17 +340,17 @@ export function LoginView() {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-100 dark:border-slate-800"></div>
+            <div className="w-full border-t border-slate-100 dark:border-[#424242]"></div>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white dark:bg-[#121F1A] px-4 text-slate-400 dark:text-slate-500 font-bold">Ou</span>
+            <span className="bg-white dark:bg-[#212121] px-4 text-slate-400 dark:text-[#9e9e9e] font-bold">Ou</span>
           </div>
         </div>
 
         <button 
           onClick={handleGoogleLogin}
           disabled={isLoggingIn}
-          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#121F1A] border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 py-4 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all active:scale-95 disabled:opacity-70"
+          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#212121] border border-slate-100 dark:border-[#424242] text-slate-600 dark:text-[#f8fafc] py-4 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-[#2c2c2c] transition-all active:scale-95 disabled:opacity-70"
         >
           <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
           Entrar com Google
