@@ -85,7 +85,8 @@ export function DevToolbar({
       for (let i = startIndex; i < startIndex + quantity; i++) {
         const name = `${bulkRole}_${i}`;
         const email = `${bulkRole}_${i}@astea.test`;
-        const uid = `mock-${bulkRole}-${i}-${Math.random().toString(36).substr(2, 9)}`;
+        // Generate a valid UUID for the database
+        const uid = crypto.randomUUID();
         
         newUsers.push({
           uid,
