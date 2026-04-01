@@ -164,7 +164,7 @@ export function FairsView({ profile }: FairsViewProps) {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [userRole, userId]);
+  }, [userRole, userId, profile?.institutionid]);
 
   const steps: CreationStep[] = ['Identidade', 'Datas', 'Estrutura', 'Formulário', 'Regras', 'Revisão'];
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, Download, History, Users, FileText, ExternalLink, ChevronRight, CheckCircle2, Loader2, Plus, Upload, AlertCircle, ShieldCheck } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { projectsService, fairsService } from '../services/supabaseService';
 import { supabase } from '../supabase';
@@ -195,8 +195,97 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
     }
   };
 
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const formSteps = useMemo(() => {
+    const steps = [
+      {
+        id: 'basic',
+        title: 'Informações Básicas',
+        description: 'Dados principais do projeto',
+        isBasic: true,
+        fields: []
+      }
+    ];
+
+    const selectedFair = fairs.find(f => f.id === formData.fairid);
+    if (selectedFair?.structure?.custom_form) {
+      let currentSection = {
+        id: 'custom_initial',
+        title: 'Informações Adicionais',
+        description: '',
+        isBasic: false,
+        fields: [] as any[]
+      };
+
+      selectedFair.structure.custom_form.forEach(field => {
+        if (field.type === 'section') {
+          if (currentSection.fields.length > 0 || currentSection.id !== 'custom_initial') {
+            steps.push(currentSection);
+          }
+          currentSection = {
+            id: field.id,
+            title: field.label,
+            description: field.helpText || '',
+            isBasic: false,
+            fields: []
+          };
+        } else {
+          currentSection.fields.push(field);
+        }
+      });
+
+      if (currentSection.fields.length > 0) {
+        steps.push(currentSection);
+      }
+    }
+
+    return steps;
+  }, [formData.fairid, fairs]);
+
+  const handleNextStep = () => {
+    if (currentStep === 0) {
+      if (!formData.fairid || !formData.title || !formData.abstract || !formData.category || !formData.modality) {
+        toast.error('Preencha os campos obrigatórios.');
+        return;
+      }
+    } else {
+      const step = formSteps[currentStep];
+      const missingRequired = step.fields.some(f => f.required && (!formData.customdata?.[f.id] || formData.customdata[f.id].length === 0));
+      if (missingRequired) {
+        toast.error('Preencha os campos obrigatórios desta seção.');
+        return;
+      }
+    }
+    setCurrentStep(prev => prev + 1);
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(prev => prev - 1);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (currentStep < formSteps.length - 1) {
+      handleNextStep();
+      return;
+    }
+
+    if (currentStep === 0) {
+      if (!formData.fairid || !formData.title || !formData.abstract || !formData.category || !formData.modality) {
+        toast.error('Preencha os campos obrigatórios.');
+        return;
+      }
+    } else {
+      const step = formSteps[currentStep];
+      const missingRequired = step.fields.some(f => f.required && (!formData.customdata?.[f.id] || formData.customdata[f.id].length === 0));
+      if (missingRequired) {
+        toast.error('Preencha os campos obrigatórios desta seção.');
+        return;
+      }
+    }
+
     if (!formData.fairid || !formData.title || !formData.abstract) {
       toast.error('Preencha os campos obrigatórios.');
       return;
@@ -254,106 +343,119 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 lg:p-8 space-y-6">
+          {/* Step Indicator */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-app-fg">{formSteps[currentStep].title}</h3>
+              {formSteps[currentStep].description && (
+                <p className="text-sm text-slate-500 dark:text-app-muted mt-1">{formSteps[currentStep].description}</p>
+              )}
+            </div>
+            <div className="text-sm font-medium text-slate-400 dark:text-app-muted bg-slate-100 dark:bg-app-surface px-3 py-1 rounded-full">
+              Passo {currentStep + 1} de {formSteps.length}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Selecione a Feira</label>
-              <select 
-                value={formData.fairid}
-                onChange={e => setFormData({...formData, fairid: e.target.value, category: '', modality: ''})}
-                className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6"
               >
-                <option value="" className="dark:bg-app-surface">Escolha uma feira ativa...</option>
-                {fairs.map(f => (
-                  <option key={f.id} value={f.id} className="dark:bg-app-surface">{f.name}</option>
-                ))}
-              </select>
-            </div>
+                {formSteps[currentStep].isBasic ? (
+                  <>
+                    <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Selecione a Feira</label>
+                  <select 
+                    value={formData.fairid}
+                    onChange={e => {
+                      setFormData({...formData, fairid: e.target.value, category: '', modality: ''});
+                      setCurrentStep(0);
+                    }}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
+                  >
+                    <option value="" className="dark:bg-app-surface">Escolha uma feira ativa...</option>
+                    {fairs.map(f => (
+                      <option key={f.id} value={f.id} className="dark:bg-app-surface">{f.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Título do Projeto</label>
-              <input 
-                type="text" 
-                value={formData.title}
-                onChange={e => setFormData({...formData, title: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
-                placeholder="Ex: Sistema de Purificação de Água com Grafeno" 
-              />
-            </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Título do Projeto</label>
+                  <input 
+                    type="text" 
+                    value={formData.title}
+                    onChange={e => setFormData({...formData, title: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                    placeholder="Ex: Sistema de Purificação de Água com Grafeno" 
+                  />
+                </div>
 
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Resumo (Abstract)</label>
-              <textarea 
-                value={formData.abstract}
-                onChange={e => setFormData({...formData, abstract: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 h-40 dark:text-app-fg" 
-                placeholder="Descreva seu projeto detalhadamente..." 
-              />
-            </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Resumo (Abstract)</label>
+                  <textarea 
+                    value={formData.abstract}
+                    onChange={e => setFormData({...formData, abstract: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 h-40 dark:text-app-fg" 
+                    placeholder="Descreva seu projeto detalhadamente..." 
+                  />
+                </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Categoria</label>
-              <select 
-                value={formData.category}
-                onChange={e => setFormData({...formData, category: e.target.value})}
-                disabled={!formData.fairid}
-                className={cn(
-                  "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
-                  !formData.fairid && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <option value="" className="dark:bg-app-surface">{formData.fairid ? 'Selecione uma categoria...' : 'Selecione uma feira primeiro'}</option>
-                {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.categories.map(cat => (
-                  <option key={cat} value={cat} className="dark:bg-app-surface">{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Modalidade</label>
-              <select 
-                value={formData.modality}
-                onChange={e => setFormData({...formData, modality: e.target.value})}
-                disabled={!formData.fairid}
-                className={cn(
-                  "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
-                  !formData.fairid && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <option value="" className="dark:bg-app-surface">{formData.fairid ? 'Selecione uma modalidade...' : 'Selecione uma feira primeiro'}</option>
-                {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.modalities.map(mod => (
-                  <option key={mod} value={mod} className="dark:bg-app-surface">{mod}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">E-mail do Orientador</label>
-              <input 
-                type="email" 
-                value={formData.advisorEmail}
-                onChange={e => setFormData({...formData, advisorEmail: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
-                placeholder="Ex: orientador@exemplo.com" 
-              />
-              <p className="text-[10px] text-slate-400 dark:text-app-muted italic">O orientador receberá um e-mail para confirmar o vínculo com este projeto.</p>
-            </div>
-
-            {/* Custom Form Fields */}
-            {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.custom_form?.map(field => {
-              if (field.type === 'section') {
-                return (
-                  <div key={field.id} className="md:col-span-2 mt-6 mb-2">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-app-fg border-b border-slate-200 dark:border-app-border pb-2">
-                      {field.label}
-                    </h3>
-                    {field.helpText && (
-                      <p className="text-sm text-slate-500 dark:text-app-muted mt-1">{field.helpText}</p>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Categoria</label>
+                  <select 
+                    value={formData.category}
+                    onChange={e => setFormData({...formData, category: e.target.value})}
+                    disabled={!formData.fairid}
+                    className={cn(
+                      "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
+                      !formData.fairid && "opacity-50 cursor-not-allowed"
                     )}
-                  </div>
-                );
-              }
+                  >
+                    <option value="" className="dark:bg-app-surface">{formData.fairid ? 'Selecione uma categoria...' : 'Selecione uma feira primeiro'}</option>
+                    {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.categories.map(cat => (
+                      <option key={cat} value={cat} className="dark:bg-app-surface">{cat}</option>
+                    ))}
+                  </select>
+                </div>
 
-              return (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Modalidade</label>
+                  <select 
+                    value={formData.modality}
+                    onChange={e => setFormData({...formData, modality: e.target.value})}
+                    disabled={!formData.fairid}
+                    className={cn(
+                      "w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg",
+                      !formData.fairid && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <option value="" className="dark:bg-app-surface">{formData.fairid ? 'Selecione uma modalidade...' : 'Selecione uma feira primeiro'}</option>
+                    {formData.fairid && fairs.find(f => f.id === formData.fairid)?.structure?.modalities.map(mod => (
+                      <option key={mod} value={mod} className="dark:bg-app-surface">{mod}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">E-mail do Orientador</label>
+                  <input 
+                    type="email" 
+                    value={formData.advisorEmail}
+                    onChange={e => setFormData({...formData, advisorEmail: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                    placeholder="Ex: orientador@exemplo.com" 
+                  />
+                  <p className="text-[10px] text-slate-400 dark:text-app-muted italic">O orientador receberá um e-mail para confirmar o vínculo com este projeto.</p>
+                </div>
+              </>
+            ) : (
+              formSteps[currentStep].fields.map(field => (
                 <div key={field.id} className="space-y-1 md:col-span-2">
                   <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">
                     {field.label}
@@ -382,13 +484,13 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                       className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg"
                     >
                       <option value="">Selecione uma opção...</option>
-                      {field.options?.map(opt => (
+                      {field.options?.map((opt: string) => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   ) : field.type === 'checkbox' ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {field.options?.map(opt => (
+                      {field.options?.map((opt: string) => (
                         <label key={opt} className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-app-surface rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-app-surface/80 transition-colors">
                           <input 
                             type="checkbox"
@@ -424,25 +526,33 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
                   )}
                   {field.helpText && <p className="text-[10px] text-slate-400 dark:text-app-muted italic">{field.helpText}</p>}
                 </div>
-              );
-            })}
+              ))
+            )}
+            </motion.div>
+          </AnimatePresence>
           </div>
 
-          <div className="pt-6 flex justify-end gap-4">
+          <div className="pt-6 flex justify-between items-center border-t border-slate-100 dark:border-app-border mt-8">
             <button 
               type="button"
-              onClick={() => setIsSubmitting(false)}
-              className="px-6 py-2 rounded-xl border border-slate-200 dark:border-app-border text-slate-600 dark:text-app-muted font-bold text-sm hover:bg-slate-50 dark:hover:bg-app-surface"
+              onClick={() => {
+                if (currentStep === 0) {
+                  setIsSubmitting(false);
+                } else {
+                  handlePrevStep();
+                }
+              }}
+              className="px-6 py-2 rounded-xl border border-slate-200 dark:border-app-border text-slate-600 dark:text-app-muted font-bold text-sm hover:bg-slate-50 dark:hover:bg-app-surface transition-colors"
             >
-              Cancelar
+              {currentStep === 0 ? 'Cancelar' : 'Voltar'}
             </button>
             <button 
               type="submit"
               disabled={loading}
-              className="px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-md flex items-center gap-2"
+              className="px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-md flex items-center gap-2 transition-colors"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submeter Projeto
+              {currentStep < formSteps.length - 1 ? 'Próximo' : 'Submeter Projeto'}
             </button>
           </div>
         </form>
@@ -601,7 +711,19 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
         <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-app-fg">Projetos Submetidos</h2>
         <div className="flex gap-2 w-full sm:w-auto">
           <button 
-            onClick={() => setIsSubmitting(true)}
+            onClick={() => {
+              setIsSubmitting(true);
+              setCurrentStep(0);
+              setFormData({
+                fairid: '',
+                title: '',
+                abstract: '',
+                category: '',
+                modality: '',
+                advisorEmail: '',
+                customdata: {}
+              });
+            }}
             className="flex-1 sm:flex-none px-6 py-3 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-md hover:scale-105 transition-all"
           >
             <Plus className="w-5 h-5" />
