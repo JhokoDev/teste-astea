@@ -245,7 +245,11 @@ export default function App() {
           </div>
           
           <main className="flex-1 flex flex-col min-w-0 w-full">
-            <Header onMenuClick={() => setIsMobileSidebarOpen(true)} profile={effectiveProfile} />
+            <Header 
+              onMenuClick={() => setIsMobileSidebarOpen(true)} 
+              profile={effectiveProfile} 
+              activeTab={activeTab}
+            />
             
             <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">

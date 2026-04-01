@@ -13,11 +13,13 @@ import {
   Briefcase,
   X,
   RefreshCw,
-  Search
+  Search,
+  FileText
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { UserRole } from '../types';
 import { supabase } from '../supabase';
+import { toast } from 'sonner';
 
 interface DevToolbarProps {
   currentRole: UserRole | null;
@@ -37,6 +39,7 @@ export function DevToolbar({
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'roles' | 'users' | 'time' | 'bulk'>('roles');
   const [users, setUsers] = useState<any[]>([]);
+  const [virtualUsers, setVirtualUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,6 +48,17 @@ export function DevToolbar({
   const [startIndex, setStartIndex] = useState(1);
   const [quantity, setQuantity] = useState(5);
   const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('dev_virtual_users');
+    if (saved) {
+      try {
+        setVirtualUsers(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error parsing virtual users:', e);
+      }
+    }
+  }, []);
 
   const roles: { id: UserRole; label: string; icon: any; color: string }[] = [
     { id: 'admin', label: 'Administrador', icon: Shield, color: 'text-red-500' },
@@ -79,39 +93,93 @@ export function DevToolbar({
 
   const handleBulkGenerate = async () => {
     setGenerating(true);
-    const toastId = 'bulk-gen';
+    const toastId = toast.loading(`Gerando ${quantity} usuários reais...`);
+    
     try {
-      const newUsers = [];
-      for (let i = startIndex; i < startIndex + quantity; i++) {
-        const name = `${bulkRole}_${i}`;
-        const email = `${bulkRole}_${i}@astea.test`;
-        // Generate a valid UUID for the database
-        const uid = crypto.randomUUID();
-        
-        newUsers.push({
-          uid,
-          email,
-          displayname: name,
+      // Call the server API for real user creation
+      const response = await fetch('/api/dev/bulk-users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           role: bulkRole,
-          institutionid: 'default-inst',
-          photourl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`
-        });
+          startIndex,
+          quantity
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao gerar usuários reais');
       }
 
-      const { error } = await supabase.from('users').insert(newUsers);
-      if (error) throw error;
-
-      alert(`${quantity} usuários gerados com sucesso!`);
+      toast.success(`${result.count} usuários REAIS gerados com sucesso!`, { id: toastId });
+      
+      // Refresh the users list to show the new real users
       if (activeTab === 'users') fetchUsers();
     } catch (error: any) {
-      console.error('Error generating bulk users:', error);
-      alert('Erro ao gerar usuários: ' + error.message);
+      console.error('Error generating real users:', error);
+      toast.error('Erro ao gerar usuários reais: ' + error.message, { 
+        id: toastId,
+        description: 'Certifique-se de que a SUPABASE_SERVICE_ROLE_KEY está configurada.'
+      });
     } finally {
       setGenerating(false);
     }
   };
 
-  const filteredUsers = users.filter(u => 
+  const handleVirtualGenerate = () => {
+    const newVirtuals = [];
+    for (let i = startIndex; i < startIndex + quantity; i++) {
+      const name = `${bulkRole}_${i}`;
+      const email = `${bulkRole}_${i}@astea.test`;
+      const uid = crypto.randomUUID();
+      
+      newVirtuals.push({
+        uid,
+        email,
+        displayname: name,
+        role: bulkRole,
+        institutionid: 'default-inst',
+        photourl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+        isVirtual: true
+      });
+    }
+
+    const updatedVirtuals = [...virtualUsers, ...newVirtuals];
+    setVirtualUsers(updatedVirtuals);
+    localStorage.setItem('dev_virtual_users', JSON.stringify(updatedVirtuals));
+    toast.success(`${quantity} usuários VIRTUAIS gerados localmente.`);
+  };
+
+  const clearVirtualUsers = () => {
+    if (confirm('Deseja remover todos os usuários virtuais locais?')) {
+      setVirtualUsers([]);
+      localStorage.removeItem('dev_virtual_users');
+      toast.info('Usuários virtuais removidos.');
+    }
+  };
+
+  const copySqlToClipboard = () => {
+    if (virtualUsers.length === 0) {
+      toast.error('Gere usuários virtuais primeiro!');
+      return;
+    }
+
+    const sql = virtualUsers.map(u => 
+      `-- Usuário: ${u.displayname}\n` +
+      `INSERT INTO auth.users (id, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud, confirmation_token) \n` +
+      `VALUES ('${u.uid}', '${u.email}', now(), '{"provider":"email","providers":["email"]}', '{"full_name":"${u.displayname}"}', now(), now(), 'authenticated', 'authenticated', '');\n` +
+      `INSERT INTO public.users (uid, email, displayname, photourl, role, institutionid) \n` +
+      `VALUES ('${u.uid}', '${u.email}', '${u.displayname}', '${u.photourl}', '${u.role}', 'default-inst');\n`
+    ).join('\n');
+
+    navigator.clipboard.writeText(sql);
+    toast.success('SQL copiado para a área de transferência!');
+  };
+
+  const allUsers = [...virtualUsers, ...users];
+  const filteredUsers = allUsers.filter(u => 
     u.displayname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -262,7 +330,12 @@ export function DevToolbar({
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-medium text-white truncate">{user.displayname}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs font-medium text-white truncate">{user.displayname}</div>
+                              {user.isVirtual && (
+                                <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1 rounded border border-amber-500/30 font-bold uppercase">Virtual</span>
+                              )}
+                            </div>
                             <div className="text-[10px] text-slate-500 truncate">{user.role} • {user.email}</div>
                           </div>
                           <ChevronRight size={14} className="text-slate-600 group-hover:text-amber-500 transition-colors" />
@@ -357,7 +430,13 @@ export function DevToolbar({
                       <span className="text-xs font-bold uppercase">Gerador em Massa</span>
                     </div>
                     <p className="text-[10px] text-slate-400 leading-relaxed">
-                      Crie múltiplos usuários de teste instantaneamente. Eles aparecerão na aba "Usuários" para impersonação.
+                      Crie usuários de teste locais. Eles existem apenas no seu navegador para simular a interface e permissões.
+                    </p>
+                  </div>
+
+                  <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg">
+                    <p className="text-[9px] text-red-400 leading-tight">
+                      <strong>Aviso:</strong> Usuários virtuais não podem salvar dados no banco (violação de FK). Use o botão de SQL abaixo para torná-los reais se necessário.
                     </p>
                   </div>
 
@@ -408,8 +487,33 @@ export function DevToolbar({
                       disabled={generating}
                       className="w-full py-3 bg-amber-500 text-slate-900 rounded-xl font-bold hover:bg-amber-400 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      {generating ? <RefreshCw size={16} className="animate-spin" /> : <Users size={16} />}
-                      Gerar Usuários
+                      {generating ? <RefreshCw size={16} className="animate-spin" /> : <Shield size={16} />}
+                      Gerar Usuários REAIS (Banco)
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handleVirtualGenerate}
+                        className="p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-300 hover:text-white flex items-center justify-center gap-2"
+                      >
+                        <Users size={12} />
+                        Gerar Virtuais
+                      </button>
+                      <button
+                        onClick={clearVirtualUsers}
+                        className="p-2 bg-slate-800 border border-red-500/30 rounded text-[10px] text-red-400 hover:bg-red-500/10 flex items-center justify-center gap-2"
+                      >
+                        <X size={12} />
+                        Limpar Virtuais
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={copySqlToClipboard}
+                      className="w-full p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-300 hover:text-white flex items-center justify-center gap-2"
+                    >
+                      <FileText size={12} />
+                      Exportar SQL (Backup)
                     </button>
 
                     <p className="text-[9px] text-slate-500 italic text-center">
