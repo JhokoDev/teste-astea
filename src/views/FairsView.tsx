@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, Shield, Layout, ChevronRight, CheckCircle2, Clock, Loader2, Trash2, AlertCircle, ClipboardList } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { getSimulatedDate } from '../lib/date-utils';
 import { fairsService } from '../services/supabaseService';
 import { Fair, EvaluationCriteria, User, FormField } from '../types';
 import { toast } from 'sonner';
@@ -913,7 +914,7 @@ export function FairsView({ profile }: FairsViewProps) {
                     {(() => {
                       const end = fair.dates.registration_end ? new Date(fair.dates.registration_end) : null;
                       if (!end) return '-';
-                      const diff = end.getTime() - new Date().getTime();
+                      const diff = end.getTime() - getSimulatedDate().getTime();
                       const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
                       return days > 0 ? `${days}d` : 'Fim';
                     })()}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Calendar, Users, ChevronRight, Loader2, Info, ExternalLink, ShieldCheck, FileText, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { getSimulatedDate } from '../lib/date-utils';
 import { fairsService } from '../services/supabaseService';
 import { Fair, User } from '../types';
 import { toast } from 'sonner';
@@ -70,7 +71,7 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
   }, []);
 
   const getFairStatus = (fair: Fair) => {
-    const now = new Date();
+    const now = getSimulatedDate();
     const regStart = fair.dates.registration_start ? new Date(fair.dates.registration_start) : null;
     const regEnd = fair.dates.registration_end ? new Date(fair.dates.registration_end) : null;
     const evalStart = fair.dates.evaluation_start ? new Date(fair.dates.evaluation_start) : null;

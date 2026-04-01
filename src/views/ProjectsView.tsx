@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, Download, History, Users, FileText, ExternalLink, ChevronRight, CheckCircle2, Loader2, Plus, Upload, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { getSimulatedDate } from '../lib/date-utils';
 import { projectsService, fairsService } from '../services/supabaseService';
 import { supabase } from '../supabase';
 import { Project, Fair, User } from '../types';
@@ -84,7 +85,7 @@ export function ProjectsView({ profile }: ProjectsViewProps) {
       };
 
       const isActive = (f: Fair) => {
-        const now = new Date();
+        const now = getSimulatedDate();
         const isStatusOk = f.status === 'publicado';
         if (!f.dates?.registration_start || !f.dates?.registration_end) return isStatusOk;
         const start = new Date(f.dates.registration_start);

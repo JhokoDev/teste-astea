@@ -12,6 +12,7 @@ import { DashboardSkeleton } from '../components/Skeleton';
 import { motion } from 'motion/react';
 import { Loader2, LayoutGrid, List } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { getSimulatedDate } from '../lib/date-utils';
 import { projectsService, fairsService, usersService, evaluationsService } from '../services/supabaseService';
 import { supabase } from '../supabase';
 import { Project, Fair, KPI, Stage, Alert, UserRole, User } from '../types';
@@ -172,7 +173,7 @@ export function DashboardView({ userRole = 'student', userId, profile }: Dashboa
     const nextDeadline = fairs
       .filter(f => f.status === 'publicado' && f.dates.registration_end)
       .map(f => new Date(f.dates.registration_end!))
-      .filter(d => d > new Date())
+      .filter(d => d > getSimulatedDate())
       .sort((a, b) => a.getTime() - b.getTime())[0];
 
     return [
@@ -236,7 +237,7 @@ export function DashboardView({ userRole = 'student', userId, profile }: Dashboa
       
       const openFairs = fairs.filter(f => {
         if (f.status !== 'publicado' || !f.dates.registration_start || !f.dates.registration_end) return false;
-        const now = new Date();
+        const now = getSimulatedDate();
         return now >= new Date(f.dates.registration_start) && now <= new Date(f.dates.registration_end);
       });
 

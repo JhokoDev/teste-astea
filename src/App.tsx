@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, TabId } from './components/Sidebar';
 import { Header } from './components/Header';
+import { DevToolbar } from './components/DevToolbar';
 import { DashboardView } from './views/DashboardView';
 import { FairsView } from './views/FairsView';
 import { ExploreFairsView } from './views/ExploreFairsView';
@@ -29,7 +30,33 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [simulatedRole, setSimulatedRole] = useState<UserRole | null>(null);
+  const [impersonatedUser, setImpersonatedUser] = useState<any>(null);
+  const [timeOffset, setTimeOffset] = useState<number>(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const savedOffset = localStorage.getItem('simulated_time_offset_days');
+    if (savedOffset) {
+      setTimeOffset(parseInt(savedOffset, 10));
+    }
+  }, []);
+
+  const handleTimeOffsetChange = (offset: number) => {
+    setTimeOffset(offset);
+    localStorage.setItem('simulated_time_offset_days', offset.toString());
+    // Reload to apply time changes globally
+    window.location.reload();
+  };
+
+  const handleUserImpersonate = (user: any) => {
+    if (user) {
+      setImpersonatedUser(user);
+      setSimulatedRole(user.role);
+    } else {
+      setImpersonatedUser(null);
+      setSimulatedRole(null);
+    }
+  };
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
@@ -168,18 +195,19 @@ export default function App() {
     );
   }
 
-  const effectiveRole = (profile?.role === 'admin' && simulatedRole) ? simulatedRole : profile?.role;
+  const effectiveProfile = impersonatedUser || profile;
+  const effectiveRole = simulatedRole || effectiveProfile?.role;
 
   const renderView = () => {
     switch (activeTab) {
-      case 'painel': return <DashboardView userRole={effectiveRole} userId={profile?.uid} profile={profile} />;
-      case 'feiras': return <FairsView profile={profile} />;
-      case 'explorar': return <ExploreFairsView profile={profile} />;
-      case 'projetos': return <ProjectsView profile={profile} />;
-      case 'avaliadores': return <EvaluatorsView profile={profile} />;
+      case 'painel': return <DashboardView userRole={effectiveRole} userId={effectiveProfile?.uid} profile={effectiveProfile} />;
+      case 'feiras': return <FairsView profile={effectiveProfile} />;
+      case 'explorar': return <ExploreFairsView profile={effectiveProfile} />;
+      case 'projetos': return <ProjectsView profile={effectiveProfile} />;
+      case 'avaliadores': return <EvaluatorsView profile={effectiveProfile} />;
       case 'configuracoes': return <SettingsView />;
       case 'perfil': return <ProfileView onSimulateRole={handleSimulateRole} simulatedRole={simulatedRole} theme={theme} onThemeChange={handleThemeChange} />;
-      default: return <DashboardView userRole={effectiveRole} userId={profile?.uid} profile={profile} />;
+      default: return <DashboardView userRole={effectiveRole} userId={effectiveProfile?.uid} profile={effectiveProfile} />;
     }
   };
 
@@ -217,7 +245,7 @@ export default function App() {
           </div>
           
           <main className="flex-1 flex flex-col min-w-0 w-full">
-            <Header onMenuClick={() => setIsMobileSidebarOpen(true)} profile={profile} />
+            <Header onMenuClick={() => setIsMobileSidebarOpen(true)} profile={effectiveProfile} />
             
             <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
@@ -233,6 +261,17 @@ export default function App() {
               </AnimatePresence>
             </div>
           </main>
+
+          {/* Dev Toolbar (only for admins or in dev mode) */}
+          {(profile?.role === 'admin' || localStorage.getItem('dev_user')) && (
+            <DevToolbar 
+              currentRole={simulatedRole}
+              onRoleChange={handleSimulateRole}
+              onUserImpersonate={handleUserImpersonate}
+              simulatedTimeOffset={timeOffset}
+              onTimeOffsetChange={handleTimeOffsetChange}
+            />
+          )}
 
           {/* Floating Action Button */}
           <motion.button 
