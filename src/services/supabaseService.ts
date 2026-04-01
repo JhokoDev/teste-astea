@@ -22,11 +22,13 @@ export interface SupabaseErrorInfo {
 }
 
 async function handleSupabaseError(error: any, operationType: OperationType, table: string | null) {
+  const userId = await getUserId();
   const { data: { user } } = await supabase.auth.getUser();
+  
   const errInfo: SupabaseErrorInfo = {
     error: error.message || String(error),
     authInfo: {
-      userId: user?.id,
+      userId: userId || undefined,
       email: user?.email,
     },
     operationType,
@@ -36,16 +38,26 @@ async function handleSupabaseError(error: any, operationType: OperationType, tab
   throw new Error(JSON.stringify(errInfo));
 }
 
+async function getUserId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) return user.id;
+
+  const mockUserStr = localStorage.getItem('dev_user');
+  if (mockUserStr) {
+    try {
+      const mockUser = JSON.parse(mockUserStr);
+      return mockUser.id || mockUser.uid;
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 // Helper for audit logs (RF16)
 async function logAction(action: string, table: string, id: string, oldData?: any, newData?: any) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Support mock user
-    const mockUserStr = localStorage.getItem('dev_user');
-    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-    const userId = user?.id || mockUser?.id;
-    
+    const userId = await getUserId();
     if (!userId) return;
 
     // For database foreign keys to auth.users, we must use a real UUID or null
@@ -112,11 +124,8 @@ export const fairsService = {
   },
 
   createFair: async (data: Partial<Fair>): Promise<ApiResponse<Fair>> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const mockUserStr = localStorage.getItem('dev_user');
-    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-    const userId = user?.id || mockUser?.id;
+    const userId = await getUserId();
+    if (!userId) return { data: null, error: { message: 'User not authenticated' } };
     
     const isMockId = userId?.startsWith('00000000') || 
                      userId?.startsWith('11111111') || 
@@ -192,11 +201,7 @@ export const fairsService = {
   },
 
   applyAsEvaluator: async (fairId: string): Promise<ApiResponse<any>> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const mockUserStr = localStorage.getItem('dev_user');
-    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-    const userId = user?.id || mockUser?.id;
-    
+    const userId = await getUserId();
     if (!userId) return { data: null, error: { message: 'User not authenticated' } };
 
     const response = await safeRequest<any>(
@@ -285,15 +290,15 @@ export const fairsService = {
   },
 
   joinFair: async (fairId: string, role: 'advisor' | 'participant'): Promise<ApiResponse<any>> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { data: null, error: { message: 'User not authenticated' } };
+    const userId = await getUserId();
+    if (!userId) return { data: null, error: { message: 'User not authenticated' } };
 
     const response = await safeRequest<any>(
       supabase
         .from('fair_participants')
         .insert({
           fairid: fairId,
-          userid: user.id,
+          userid: userId,
           role
         })
         .select()
@@ -404,12 +409,7 @@ export const projectsService = {
   },
 
   submitProject: async (data: Partial<Project>): Promise<ApiResponse<Project>> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const mockUserStr = localStorage.getItem('dev_user');
-    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-    const userId = user?.id || mockUser?.id;
-    
+    const userId = await getUserId();
     if (!userId) return { data: null, error: { message: 'User not authenticated' } };
 
     const isMockId = userId?.startsWith('00000000') || 
@@ -444,11 +444,9 @@ export const projectsService = {
   },
 
   updateProject: async (id: string, data: Partial<Project>, justification?: string): Promise<ApiResponse<Project>> => {
-    const { data: oldProject } = await supabase.from('projects').select('*').eq('id', id).single();
-    const { data: { user } } = await supabase.auth.getUser();
-    const mockUserStr = localStorage.getItem('dev_user');
-    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-    const userId = user?.id || mockUser?.id || '00000000-0000-0000-0000-000000000000';
+    const oldProjectResponse = await supabase.from('projects').select('*').eq('id', id).single();
+    const oldProject = oldProjectResponse.data;
+    const userId = await getUserId() || '00000000-0000-0000-0000-000000000000';
 
     const newVersionNumber = (oldProject?.currentversion || 1) + 1;
 
@@ -568,12 +566,7 @@ export const projectsService = {
 
 export const evaluationsService = {
   submitEvaluation: async (data: Partial<Evaluation>): Promise<ApiResponse<Evaluation>> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const mockUserStr = localStorage.getItem('dev_user');
-    const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-    const userId = user?.id || mockUser?.id;
-    
+    const userId = await getUserId();
     if (!userId) return { data: null, error: { message: 'User not authenticated' } };
 
     const response = await safeRequest<Evaluation>(
