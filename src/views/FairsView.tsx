@@ -48,6 +48,8 @@ export function FairsView({ profile }: FairsViewProps) {
     dates: {
       registration_start: '',
       registration_end: '',
+      evaluator_registration_start: '',
+      evaluator_registration_end: '',
       evaluation_start: '',
       evaluation_end: '',
       results_date: ''
@@ -171,10 +173,11 @@ export function FairsView({ profile }: FairsViewProps) {
 
   const validateDates = () => {
     const d = formData.dates;
-    if (!d?.registration_start || !d?.registration_end || !d?.evaluation_start || !d?.evaluation_end || !d?.results_date) {
+    if (!d?.registration_start || !d?.registration_end || !d?.evaluator_registration_start || !d?.evaluator_registration_end || !d?.evaluation_start || !d?.evaluation_end || !d?.results_date) {
       return "Todas as datas são obrigatórias.";
     }
     if (new Date(d.registration_start) >= new Date(d.registration_end)) return "Fim das inscrições deve ser após o início.";
+    if (new Date(d.evaluator_registration_start) >= new Date(d.evaluator_registration_end)) return "Fim das inscrições de avaliadores deve ser após o início.";
     if (new Date(d.registration_end) >= new Date(d.evaluation_start)) return "Avaliação deve começar após o fim das inscrições.";
     if (new Date(d.evaluation_start) >= new Date(d.evaluation_end)) return "Fim da avaliação deve ser após o início.";
     if (new Date(d.evaluation_end) >= new Date(d.results_date)) return "Resultado deve ser após o fim da avaliação.";
@@ -187,7 +190,7 @@ export function FairsView({ profile }: FairsViewProps) {
     }
     if (currentStep === 'Datas') {
       const d = formData.dates;
-      return d?.registration_start && d?.registration_end && d?.evaluation_start && d?.evaluation_end && d?.results_date;
+      return d?.registration_start && d?.registration_end && d?.evaluator_registration_start && d?.evaluator_registration_end && d?.evaluation_start && d?.evaluation_end && d?.results_date;
     }
     if (currentStep === 'Estrutura') {
       return formData.structure?.categories && formData.structure.categories.length > 0;
@@ -262,7 +265,15 @@ export function FairsView({ profile }: FairsViewProps) {
         name: '',
         description: '',
         status: 'rascunho',
-        dates: { registration_start: '', registration_end: '', evaluation_start: '', evaluation_end: '', results_date: '' },
+        dates: { 
+          registration_start: '', 
+          registration_end: '', 
+          evaluator_registration_start: '',
+          evaluator_registration_end: '',
+          evaluation_start: '', 
+          evaluation_end: '', 
+          results_date: '' 
+        },
         structure: { 
           categories: [], 
           modalities: [],
@@ -493,7 +504,7 @@ export function FairsView({ profile }: FairsViewProps) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Início Inscrições</label>
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Início Inscrições Projetos</label>
                   <input 
                     type="date" 
                     value={formData.dates?.registration_start || ''}
@@ -502,11 +513,29 @@ export function FairsView({ profile }: FairsViewProps) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Fim Inscrições</label>
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Fim Inscrições Projetos</label>
                   <input 
                     type="date" 
                     value={formData.dates?.registration_end || ''}
                     onChange={e => setFormData({...formData, dates: {...formData.dates!, registration_end: e.target.value}})}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Início Inscrições Avaliadores</label>
+                  <input 
+                    type="date" 
+                    value={formData.dates?.evaluator_registration_start || ''}
+                    onChange={e => setFormData({...formData, dates: {...formData.dates!, evaluator_registration_start: e.target.value}})}
+                    className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 dark:text-app-muted uppercase">Fim Inscrições Avaliadores</label>
+                  <input 
+                    type="date" 
+                    value={formData.dates?.evaluator_registration_end || ''}
+                    onChange={e => setFormData({...formData, dates: {...formData.dates!, evaluator_registration_end: e.target.value}})}
                     className="w-full bg-slate-50 dark:bg-app-surface border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary/20 dark:text-app-fg" 
                   />
                 </div>

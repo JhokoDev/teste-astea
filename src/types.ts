@@ -44,6 +44,8 @@ export interface Fair {
   dates: {
     registration_start: string | null;
     registration_end: string | null;
+    evaluator_registration_start: string | null;
+    evaluator_registration_end: string | null;
     evaluation_start: string | null;
     evaluation_end: string | null;
     results_date: string | null;

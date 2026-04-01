@@ -74,9 +74,14 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
     const now = getSimulatedDate();
     const regStart = fair.dates.registration_start ? new Date(fair.dates.registration_start) : null;
     const regEnd = fair.dates.registration_end ? new Date(fair.dates.registration_end) : null;
+    const evalRegStart = fair.dates.evaluator_registration_start ? new Date(fair.dates.evaluator_registration_start) : null;
+    const evalRegEnd = fair.dates.evaluator_registration_end ? new Date(fair.dates.evaluator_registration_end) : null;
     const evalStart = fair.dates.evaluation_start ? new Date(fair.dates.evaluation_start) : null;
     const evalEnd = fair.dates.evaluation_end ? new Date(fair.dates.evaluation_end) : null;
 
+    if (evalRegStart && evalRegEnd && now >= evalRegStart && now <= evalRegEnd) {
+      return { label: 'Candidatura de Avaliadores', color: 'text-emerald-600 bg-emerald-100' };
+    }
     if (regStart && regEnd && now >= regStart && now <= regEnd) {
       return { label: 'Inscrições Abertas', color: 'text-primary bg-primary/10' };
     }
@@ -277,27 +282,43 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
               <h3 className="text-lg font-bold dark:text-app-fg">Participar</h3>
               {!participation ? (
                 <>
-                  <p className="text-xs text-slate-500 dark:text-app-muted">
-                    Interessado nesta feira? Escolha como deseja participar para começar.
-                  </p>
-                  <div className="grid grid-cols-1 gap-3">
-                    <button 
-                      disabled={joining}
-                      className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
-                      onClick={() => handleJoinFair('participant')}
-                    >
-                      {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
-                      Entrar como Participante
-                    </button>
-                    <button 
-                      disabled={joining}
-                      className="w-full py-3 bg-white dark:bg-app-surface border border-primary text-primary dark:text-primary-light rounded-xl font-bold hover:bg-primary/5 dark:hover:bg-primary/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      onClick={() => handleJoinFair('advisor')}
-                    >
-                      {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                      Entrar como Orientador
-                    </button>
-                  </div>
+                  {(() => {
+                    const now = getSimulatedDate();
+                    const isProjectRegActive = selectedFair.dates.registration_start && selectedFair.dates.registration_end && 
+                      now >= new Date(selectedFair.dates.registration_start) && now <= new Date(selectedFair.dates.registration_end);
+                    const isEvalRegActive = selectedFair.dates.evaluator_registration_start && selectedFair.dates.evaluator_registration_end && 
+                      now >= new Date(selectedFair.dates.evaluator_registration_start) && now <= new Date(selectedFair.dates.evaluator_registration_end);
+
+                    return (
+                      <>
+                        <p className="text-xs text-slate-500 dark:text-app-muted">
+                          {isProjectRegActive 
+                            ? "As inscrições de projetos estão abertas! Escolha como deseja participar."
+                            : isEvalRegActive
+                              ? "No momento, apenas inscrições para avaliadores estão abertas. Inscrições de projetos em breve."
+                              : "As inscrições para esta feira ainda não começaram ou já foram encerradas."}
+                        </p>
+                        <div className="grid grid-cols-1 gap-3">
+                          <button 
+                            disabled={joining || !isProjectRegActive}
+                            className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                            onClick={() => handleJoinFair('participant')}
+                          >
+                            {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                            Entrar como Participante
+                          </button>
+                          <button 
+                            disabled={joining || !isProjectRegActive}
+                            className="w-full py-3 bg-white dark:bg-app-surface border border-primary text-primary dark:text-primary-light rounded-xl font-bold hover:bg-primary/5 dark:hover:bg-primary/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                            onClick={() => handleJoinFair('advisor')}
+                          >
+                            {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                            Entrar como Orientador
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               ) : (
                 <div className="space-y-4">
@@ -309,7 +330,12 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
                   </div>
                   {participation.role === 'participant' ? (
                     <button 
-                      className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
+                      disabled={(() => {
+                        const now = getSimulatedDate();
+                        return !(selectedFair.dates.registration_start && selectedFair.dates.registration_end && 
+                          now >= new Date(selectedFair.dates.registration_start) && now <= new Date(selectedFair.dates.registration_end));
+                      })()}
+                      className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
                       onClick={() => {
                         toast.info("Vá para a aba 'Projetos' para iniciar sua submissão nesta feira.");
                       }}
@@ -328,20 +354,32 @@ export function ExploreFairsView({ profile }: ExploreFairsViewProps) {
 
             <div className="bg-white dark:bg-app-card elevation-1 rounded-2xl p-6 space-y-4">
               <h3 className="text-lg font-bold dark:text-app-fg">Avaliador</h3>
-              <p className="text-xs text-slate-500 dark:text-app-muted">
-                Tem experiência na área? Candidate-se para ser um avaliador nesta feira.
-              </p>
-              <button 
-                disabled={applying || hasApplied || profile?.role === 'evaluator' || profile?.role === 'admin' || profile?.role === 'manager'}
-                className={cn(
-                  "w-full py-3 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50",
-                  hasApplied ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40" : "bg-white dark:bg-app-surface border border-primary text-primary dark:text-primary-light hover:bg-primary/5 dark:hover:bg-primary/10"
-                )}
-                onClick={handleApplyEvaluator}
-              >
-                {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : (hasApplied ? <ShieldCheck className="w-4 h-4" /> : <Users className="w-4 h-4" />)}
-                {hasApplied ? 'Candidatura Enviada' : 'Candidatar-se'}
-              </button>
+              {(() => {
+                const now = getSimulatedDate();
+                const isEvalRegActive = selectedFair.dates.evaluator_registration_start && selectedFair.dates.evaluator_registration_end && 
+                  now >= new Date(selectedFair.dates.evaluator_registration_start) && now <= new Date(selectedFair.dates.evaluator_registration_end);
+
+                return (
+                  <>
+                    <p className="text-xs text-slate-500 dark:text-app-muted">
+                      {isEvalRegActive 
+                        ? "As candidaturas para avaliadores estão abertas! Candidate-se se tiver experiência na área."
+                        : "As candidaturas para avaliadores não estão abertas no momento."}
+                    </p>
+                    <button 
+                      disabled={applying || hasApplied || !isEvalRegActive || profile?.role === 'evaluator' || profile?.role === 'admin' || profile?.role === 'manager'}
+                      className={cn(
+                        "w-full py-3 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale",
+                        hasApplied ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40" : "bg-white dark:bg-app-surface border border-primary text-primary dark:text-primary-light hover:bg-primary/5 dark:hover:bg-primary/10"
+                      )}
+                      onClick={handleApplyEvaluator}
+                    >
+                      {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : (hasApplied ? <ShieldCheck className="w-4 h-4" /> : <Users className="w-4 h-4" />)}
+                      {hasApplied ? 'Candidatura Enviada' : 'Candidatar-se'}
+                    </button>
+                  </>
+                );
+              })()}
               {profile?.role === 'evaluator' && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 text-center font-bold">Você já é um avaliador.</p>}
               {(profile?.role === 'admin' || profile?.role === 'manager') && <p className="text-[10px] text-slate-400 dark:text-app-muted text-center font-bold">Organizadores não podem se candidatar.</p>}
             </div>

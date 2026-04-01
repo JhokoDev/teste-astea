@@ -244,6 +244,16 @@ export function DashboardView({ userRole = 'student', userId, profile }: Dashboa
       if (openFairs.length > 0) {
         alerts.push({ id: 's2', title: 'Submissão Aberta', description: `${openFairs[0].name} está aceitando submissões.`, type: 'info' });
       }
+
+      const openEvalFairs = fairs.filter(f => {
+        if (f.status !== 'publicado' || !f.dates.evaluator_registration_start || !f.dates.evaluator_registration_end) return false;
+        const now = getSimulatedDate();
+        return now >= new Date(f.dates.evaluator_registration_start) && now <= new Date(f.dates.evaluator_registration_end);
+      });
+
+      if (openEvalFairs.length > 0) {
+        alerts.push({ id: 's3', title: 'Candidatura de Avaliadores', description: `${openEvalFairs[0].name} está aceitando candidaturas de avaliadores.`, type: 'info' });
+      }
     }
 
     return alerts;
