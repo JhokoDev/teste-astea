@@ -35,10 +35,16 @@ export function DevToolbar({
   onTimeOffsetChange
 }: DevToolbarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'roles' | 'users' | 'time'>('roles');
+  const [activeTab, setActiveTab] = useState<'roles' | 'users' | 'time' | 'bulk'>('roles');
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Bulk Generation State
+  const [bulkRole, setBulkRole] = useState<UserRole>('student');
+  const [startIndex, setStartIndex] = useState(1);
+  const [quantity, setQuantity] = useState(5);
+  const [generating, setGenerating] = useState(false);
 
   const roles: { id: UserRole; label: string; icon: any; color: string }[] = [
     { id: 'admin', label: 'Administrador', icon: Shield, color: 'text-red-500' },
@@ -68,6 +74,39 @@ export function DevToolbar({
       console.error('Error fetching users for dev toolbar:', error);
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  const handleBulkGenerate = async () => {
+    setGenerating(true);
+    const toastId = 'bulk-gen';
+    try {
+      const newUsers = [];
+      for (let i = startIndex; i < startIndex + quantity; i++) {
+        const name = `${bulkRole}_${i}`;
+        const email = `${bulkRole}_${i}@astea.test`;
+        const uid = `mock-${bulkRole}-${i}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        newUsers.push({
+          uid,
+          email,
+          displayname: name,
+          role: bulkRole,
+          institutionid: 'default-inst',
+          photourl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`
+        });
+      }
+
+      const { error } = await supabase.from('users').insert(newUsers);
+      if (error) throw error;
+
+      alert(`${quantity} usuários gerados com sucesso!`);
+      if (activeTab === 'users') fetchUsers();
+    } catch (error: any) {
+      console.error('Error generating bulk users:', error);
+      alert('Erro ao gerar usuários: ' + error.message);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -139,6 +178,15 @@ export function DevToolbar({
                 )}
               >
                 Tempo
+              </button>
+              <button
+                onClick={() => setActiveTab('bulk')}
+                className={cn(
+                  "flex-1 p-3 text-xs font-medium transition-colors",
+                  activeTab === 'bulk' ? "text-amber-500 border-b-2 border-amber-500 bg-slate-800" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                Gerador
               </button>
             </div>
 
@@ -296,6 +344,76 @@ export function DevToolbar({
                         </button>
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'bulk' && (
+                <div className="space-y-6">
+                  <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-500 mb-2">
+                      <RefreshCw size={16} />
+                      <span className="text-xs font-bold uppercase">Gerador em Massa</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      Crie múltiplos usuários de teste instantaneamente. Eles aparecerão na aba "Usuários" para impersonação.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 uppercase font-bold">Cargo (Role)</label>
+                      <select 
+                        value={bulkRole}
+                        onChange={(e) => setBulkRole(e.target.value as UserRole)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-amber-500"
+                      >
+                        {roles.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-500 uppercase font-bold">Índice Inicial</label>
+                        <input 
+                          type="number"
+                          value={startIndex}
+                          onChange={(e) => setStartIndex(parseInt(e.target.value) || 1)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-500 uppercase font-bold">Quantidade</label>
+                        <input 
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700 space-y-2">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Exemplo de Saída:</p>
+                      <div className="text-[10px] text-slate-400 font-mono space-y-1">
+                        <div>Nome: {bulkRole}_{startIndex}</div>
+                        <div>Email: {bulkRole}_{startIndex}@astea.test</div>
+                        <div>Senha: mudar123</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleBulkGenerate}
+                      disabled={generating}
+                      className="w-full py-3 bg-amber-500 text-slate-900 rounded-xl font-bold hover:bg-amber-400 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {generating ? <RefreshCw size={16} className="animate-spin" /> : <Users size={16} />}
+                      Gerar Usuários
+                    </button>
+
+                    <p className="text-[9px] text-slate-500 italic text-center">
+                      * Usuários gerados via mock para impersonação rápida.
+                    </p>
                   </div>
                 </div>
               )}
